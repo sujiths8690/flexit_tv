@@ -1,0 +1,40 @@
+name: menuboard_tv
+description: Premium digital menu board for TV and display screens.
+publish_to: none
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.0.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  video_player: ^2.8.2
+
+  # QR code generation
+  qr_flutter: ^4.1.0
+
+  # Local persistent storage (for deviceCode)
+  shared_preferences: ^2.2.2
+
+  # HTTP requests (polling backend)
+  http: ^1.2.0
+
+  # Google Fonts — loads Playfair Display & Nunito without local font files
+  google_fonts: ^6.2.1
+
+  # Cached network images
+  cached_network_image: ^3.3.1
+
+  # Video playback (uncomment when needed)
+  # video_player: ^2.8.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^3.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/character/namaste.webm

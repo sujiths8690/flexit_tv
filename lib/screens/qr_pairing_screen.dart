@@ -1,0 +1,376 @@
+// lib/screens/qr_pairing_screen.dart
+//
+// Shown when the display device is not yet paired. Displays:
+//   • The device's unique QR code (encodes deviceCode)
+//   • A friendly animated mascot at the bottom
+//   • Rotating instruction prompts
+
+import 'dart:convert';
+import 'dart:math';
+import 'package:flutter/material.dart';
+import 'package:google_fonts/google_fonts.dart';
+import '../theme/app_theme.dart';
+import '../widgets/qr_code_widget.dart';
+import '../widgets/character_video_widget.dart';
+
+class QrPairingScreen extends StatefulWidget {
+  final String deviceCode;
+  const QrPairingScreen({super.key, required this.deviceCode});
+
+  @override
+  State<QrPairingScreen> createState() => _QrPairingScreenState();
+}
+
+class _QrPairingScreenState extends State<QrPairingScreen>
+    with TickerProviderStateMixin {
+  late AnimationController _pulseCtrl;
+  late AnimationController _slideCtrl;
+  late Animation<double> _pulseAnim;
+  late Animation<Offset> _slideAnim;
+  late Animation<double> _fadeAnim;
+
+  int _tipIndex = 0;
+  static const List<String> _tips = [
+    'Open your MenuBoard app',
+    'Tap  +  and choose "Add Display"',
+    'Scan the QR code or enter the device code',
+    "That's it — your menu goes live!",
+  ];
+
+  @override
+  void initState() {
+    super.initState();
+
+    _pulseCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(seconds: 2),
+    )..repeat(reverse: true);
+
+    _pulseAnim = Tween<double>(begin: 1.0, end: 1.06).animate(
+      CurvedAnimation(parent: _pulseCtrl, curve: Curves.easeInOut),
+    );
+
+    _slideCtrl = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 600),
+    );
+    _slideAnim = Tween<Offset>(
+      begin: const Offset(0, 0.3),
+      end: Offset.zero,
+    ).animate(CurvedAnimation(parent: _slideCtrl, curve: Curves.easeOut));
+    _fadeAnim = CurvedAnimation(parent: _slideCtrl, curve: Curves.easeIn);
+
+    _slideCtrl.forward();
+    _rotateTips();
+  }
+
+  void _rotateTips() {
+    Future.delayed(const Duration(seconds: 3), () {
+      if (!mounted) return;
+      _slideCtrl.reverse().then((_) {
+        if (!mounted) return;
+        setState(() => _tipIndex = (_tipIndex + 1) % _tips.length);
+        _slideCtrl.forward();
+        _rotateTips();
+      });
+    });
+  }
+
+  @override
+  void dispose() {
+    _pulseCtrl.dispose();
+    _slideCtrl.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final size = MediaQuery.of(context).size;
+    final isPortrait = size.height > size.width;
+
+    return Scaffold(
+      backgroundColor: AppTheme.background,
+      body: Stack(
+        children: [
+          // ── Background texture ─────────────────────────────────────────
+          _BackgroundGrid(),
+
+          // ── Ambient glow behind QR ─────────────────────────────────────
+          Positioned(
+            top: size.height * 0.15,
+            left: 0,
+            right: 0,
+            child: Center(
+              child: Container(
+                width: 380,
+                height: 380,
+                decoration: BoxDecoration(
+                  shape: BoxShape.circle,
+                  gradient: RadialGradient(
+                    colors: [
+                      AppTheme.gold.withOpacity(0.08),
+                      Colors.transparent,
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+
+          // ── Main content ───────────────────────────────────────────────
+          SafeArea(
+            child: isPortrait
+                ? _buildPortraitLayout(size)
+                : _buildLandscapeLayout(size),
+          ),
+
+          // ── Mascot at bottom ───────────────────────────────────────────
+          const Positioned(
+            bottom: 20,
+            right: 20,
+            child: CharacterVideoWidget(
+              assetPath: 'assets/character/namaste.webm',
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLandscapeLayout(Size size) {
+    return Row(
+      children: [
+        // Left: branding & instructions
+        Expanded(
+          child: Padding(
+            padding: const EdgeInsets.fromLTRB(60, 40, 40, 120),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                // Logo mark
+                Container(
+                  width: 56,
+                  height: 56,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(14),
+                    gradient: const LinearGradient(
+                      colors: [AppTheme.gold, AppTheme.goldDim],
+                    ),
+                  ),
+                  child: Center(
+                    child: Text(
+                      'M',
+                      style: TextStyle(
+                        fontFamily: GoogleFonts.playfairDisplay().fontFamily,
+                        fontSize: 30,
+                        color: AppTheme.background,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 32),
+                Text(
+                  'Connect this\ndisplay to your\nbusiness',
+                  style: TextStyle(
+                    fontFamily: GoogleFonts.playfairDisplay().fontFamily,
+                    fontSize: 42,
+                    color: AppTheme.white,
+                    fontWeight: FontWeight.w700,
+                    height: 1.2,
+                  ),
+                ),
+                const SizedBox(height: 24),
+                // Animated tip
+                SlideTransition(
+                  position: _slideAnim,
+                  child: FadeTransition(
+                    opacity: _fadeAnim,
+                    child: Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Container(
+                          margin: const EdgeInsets.only(top: 6),
+                          width: 8,
+                          height: 8,
+                          decoration: const BoxDecoration(
+                            color: AppTheme.gold,
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: Text(
+                            _tips[_tipIndex],
+                            style: TextStyle(
+                              fontFamily: GoogleFonts.nunito().fontFamily,
+                              fontSize: 20,
+                              color: AppTheme.whiteDim,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 40),
+                // Device code pill
+                _DeviceCodeBadge(code: widget.deviceCode),
+              ],
+            ),
+          ),
+        ),
+        // Right: QR code
+        Padding(
+          padding: const EdgeInsets.fromLTRB(40, 60, 80, 160),
+          child: Center(
+            child: ScaleTransition(
+              scale: _pulseAnim,
+              child: QrCodeWidget(
+                data: _qrData(),
+                size: min(size.height * 0.55, 320),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPortraitLayout(Size size) {
+    return Column(
+      children: [
+        const SizedBox(height: 60),
+        Text(
+          'Connect this display',
+          style: TextStyle(
+            fontFamily: GoogleFonts.playfairDisplay().fontFamily,
+            fontSize: 34,
+            color: AppTheme.white,
+            fontWeight: FontWeight.w700,
+          ),
+          textAlign: TextAlign.center,
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'Scan with your MenuBoard app',
+          style: TextStyle(
+            fontFamily: GoogleFonts.nunito().fontFamily,
+            fontSize: 16,
+            color: AppTheme.whiteDim,
+          ),
+        ),
+        const SizedBox(height: 40),
+        ScaleTransition(
+          scale: _pulseAnim,
+          child: QrCodeWidget(
+            data: _qrData(),
+            size: min(size.width * 0.55, 280),
+          ),
+        ),
+        const SizedBox(height: 32),
+        _DeviceCodeBadge(code: widget.deviceCode),
+        const SizedBox(height: 24),
+        SlideTransition(
+          position: _slideAnim,
+          child: FadeTransition(
+            opacity: _fadeAnim,
+            child: Text(
+              _tips[_tipIndex],
+              style: TextStyle(
+                fontFamily: GoogleFonts.nunito().fontFamily,
+                fontSize: 18,
+                color: AppTheme.whiteDim,
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  String _qrData() {
+    // QR payload — your mobile app will read this
+    return jsonEncode({
+      'deviceCode': widget.deviceCode,
+      'app': 'menuboard',
+      'version': 1,
+    });
+  }
+}
+
+class _DeviceCodeBadge extends StatelessWidget {
+  final String code;
+  const _DeviceCodeBadge({required this.code});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: AppTheme.goldDim, width: 1),
+        color: AppTheme.gold.withOpacity(0.08),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.tv_rounded, color: AppTheme.gold, size: 18),
+          const SizedBox(width: 10),
+          Text(
+            'Device Code: ',
+            style: TextStyle(
+              fontFamily: GoogleFonts.nunito().fontFamily,
+              fontSize: 13,
+              color: AppTheme.whiteDim,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+          Text(
+            code,
+            style: TextStyle(
+              fontFamily: GoogleFonts.nunito().fontFamily,
+              fontSize: 14,
+              color: AppTheme.gold,
+              fontWeight: FontWeight.w800,
+              letterSpacing: 2,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _BackgroundGrid extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return CustomPaint(
+      painter: _GridPainter(),
+      size: Size.infinite,
+    );
+  }
+}
+
+class _GridPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = const Color(0xFF1C1C28).withOpacity(0.6)
+      ..strokeWidth = 0.5;
+
+    const spacing = 60.0;
+    for (double x = 0; x < size.width; x += spacing) {
+      canvas.drawLine(Offset(x, 0), Offset(x, size.height), paint);
+    }
+    for (double y = 0; y < size.height; y += spacing) {
+      canvas.drawLine(Offset(0, y), Offset(size.width, y), paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(_) => false;
+}
