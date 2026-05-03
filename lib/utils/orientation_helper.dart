@@ -1,16 +1,18 @@
 // lib/utils/orientation_helper.dart
 //
-// Applies the orientation chosen in the mobile app by rotating the root widget.
-// The server sends DeviceOrientation; we convert to a Flutter rotation transform.
+// Applies the orientation chosen in the mobile app.
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart' as services;
 import '../models/models.dart';
 
 class OrientationHelper {
-  /// Sets the system preferred orientation based on DisplayOrientation
-  static Future<void> applySystemOrientation(DisplayOrientation orientation) async {
+  /// Sets the system preferred orientation based on DisplayOrientation.
+  static Future<void> applySystemOrientation(
+    DisplayOrientation orientation,
+  ) async {
     switch (orientation) {
+      case DisplayOrientation.normal:
       case DisplayOrientation.landscape:
         await services.SystemChrome.setPreferredOrientations([
           services.DeviceOrientation.landscapeLeft,
@@ -22,11 +24,13 @@ class OrientationHelper {
           services.DeviceOrientation.portraitUp,
         ]);
         break;
+      case DisplayOrientation.left:
       case DisplayOrientation.rotatedLeft:
         await services.SystemChrome.setPreferredOrientations([
           services.DeviceOrientation.landscapeLeft,
         ]);
         break;
+      case DisplayOrientation.right:
       case DisplayOrientation.rotatedRight:
         await services.SystemChrome.setPreferredOrientations([
           services.DeviceOrientation.landscapeRight,
@@ -34,47 +38,50 @@ class OrientationHelper {
         break;
       case DisplayOrientation.inverted:
         await services.SystemChrome.setPreferredOrientations([
-          services.DeviceOrientation.portraitDown,
+          services.DeviceOrientation.landscapeRight,
         ]);
         break;
     }
   }
 
-  /// Returns a software transform for cases where the physical mount
-  /// doesn't match system orientation (e.g. TV installed upside down)
+  /// Returns a software transform for TVs mounted in a non-standard direction.
   static Widget applyTransform({
     required DisplayOrientation orientation,
     required Widget child,
     required Size screenSize,
   }) {
-    double angle = 0;
-    switch (orientation) {
-      case DisplayOrientation.rotatedLeft:
-        angle = -1.5708; // -90°
-        break;
-      case DisplayOrientation.rotatedRight:
-        angle = 1.5708; // +90°
-        break;
-      case DisplayOrientation.inverted:
-        angle = 3.1416; // 180°
-        break;
-      default:
-        angle = 0;
-    }
+    final quarterTurns = switch (orientation) {
+      DisplayOrientation.left || DisplayOrientation.rotatedLeft => 3,
+      DisplayOrientation.right || DisplayOrientation.rotatedRight => 1,
+      DisplayOrientation.inverted => 2,
+      _ => 0,
+    };
 
-    if (angle == 0) return child;
+    if (quarterTurns == 0) return child;
 
-    return Transform.rotate(
-      angle: angle,
-      child: SizedBox(
-        width: screenSize.width,
-        height: screenSize.height,
+    return SizedBox.expand(
+      child: RotatedBox(
+        quarterTurns: quarterTurns,
         child: child,
       ),
     );
   }
 
-  /// Responsive grid columns based on viewport width
+  static Size contentSizeFor({
+    required DisplayOrientation orientation,
+    required Size screenSize,
+  }) {
+    return switch (orientation) {
+      DisplayOrientation.left ||
+      DisplayOrientation.right ||
+      DisplayOrientation.rotatedLeft ||
+      DisplayOrientation.rotatedRight =>
+        Size(screenSize.height, screenSize.width),
+      _ => screenSize,
+    };
+  }
+
+  /// Responsive grid columns based on viewport width.
   static int gridColumns(double width) {
     if (width >= 1600) return 4;
     if (width >= 1000) return 3;
@@ -82,7 +89,7 @@ class OrientationHelper {
     return 1;
   }
 
-  /// Responsive font scale
+  /// Responsive font scale.
   static double fontScale(double width) {
     if (width >= 1600) return 1.2;
     if (width >= 1000) return 1.0;

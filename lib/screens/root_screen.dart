@@ -75,16 +75,30 @@ class _RootScreenState extends State<RootScreen> {
       return MediaScreen(
         mediaUrl: display.mediaUrl ?? '',
         mediaType: display.mediaType ?? 'image',
+        mediaItems: display.mediaItems,
+        slideDurationSeconds: display.autoScrollIntervalSeconds ?? 8,
+        transitionStyle: display.transitionStyle,
+        transitionSpeedSeconds: display.transitionSpeedSeconds,
       );
     }
 
     // ── Menu board mode ───────────────────────────────────────────────────
     return LayoutBuilder(
       builder: (context, constraints) {
-        return MenuBoardScreen(
+        final screenSize = Size(constraints.maxWidth, constraints.maxHeight);
+        final menuSize = OrientationHelper.contentSizeFor(
+          orientation: config.orientation,
+          screenSize: screenSize,
+        );
+        final menu = MenuBoardScreen(
           config: config,
           displayConfig: display,
-          screenSize: Size(constraints.maxWidth, constraints.maxHeight),
+          screenSize: menuSize,
+        );
+        return OrientationHelper.applyTransform(
+          orientation: config.orientation,
+          screenSize: screenSize,
+          child: menu,
         );
       },
     );
@@ -106,9 +120,7 @@ class _WaitingScreen extends StatelessWidget {
             const CircularProgressIndicator(color: Color(0xFFE8B84B)),
             const SizedBox(height: 24),
             Text(
-              businessName != null
-                  ? 'Welcome, $businessName!'
-                  : 'Connected',
+              businessName != null ? 'Welcome, $businessName!' : 'Connected',
               style: TextStyle(
                 fontFamily: GoogleFonts.playfairDisplay().fontFamily,
                 fontSize: 28,

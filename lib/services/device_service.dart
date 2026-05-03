@@ -98,7 +98,7 @@ class DeviceService extends ChangeNotifier {
     return DeviceConfig(
       deviceCode: _deviceCode,
       isPaired: false,
-      orientation: DisplayOrientation.landscape,
+      orientation: DisplayOrientation.normal,
     );
   }
 }

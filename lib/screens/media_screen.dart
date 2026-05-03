@@ -5,17 +5,28 @@
 
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'dart:async';
+import 'package:video_player/video_player.dart';
+import '../models/models.dart';
 import '../theme/app_theme.dart';
 import '../widgets/mascot_widget.dart';
 
 class MediaScreen extends StatefulWidget {
   final String mediaUrl;
   final String mediaType; // 'image' | 'video'
+  final List<DisplayMediaItem> mediaItems;
+  final int slideDurationSeconds;
+  final String transitionStyle;
+  final double transitionSpeedSeconds;
 
   const MediaScreen({
     super.key,
     required this.mediaUrl,
     required this.mediaType,
+    this.mediaItems = const [],
+    this.slideDurationSeconds = 8,
+    this.transitionStyle = 'fade',
+    this.transitionSpeedSeconds = 0.5,
   });
 
   @override
@@ -23,39 +34,70 @@ class MediaScreen extends StatefulWidget {
 }
 
 class _MediaScreenState extends State<MediaScreen>
-    with SingleTickerProviderStateMixin {
-  late AnimationController _fadeCtrl;
-  late Animation<double> _fadeAnim;
+{
+  Timer? _timer;
+  int _index = 0;
 
   @override
   void initState() {
     super.initState();
-    _fadeCtrl = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1000),
-    )..forward();
-    _fadeAnim = CurvedAnimation(parent: _fadeCtrl, curve: Curves.easeIn);
+    _startTimer();
+  }
+
+  @override
+  void didUpdateWidget(MediaScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.mediaItems != widget.mediaItems ||
+        oldWidget.slideDurationSeconds != widget.slideDurationSeconds) {
+      _index = 0;
+      _startTimer();
+    }
+  }
+
+  void _startTimer() {
+    _timer?.cancel();
+    if (widget.mediaItems.length <= 1) return;
+    _timer = Timer.periodic(
+      Duration(seconds: widget.slideDurationSeconds),
+      (_) {
+        if (!mounted) return;
+        setState(() => _index = (_index + 1) % widget.mediaItems.length);
+      },
+    );
   }
 
   @override
   void dispose() {
-    _fadeCtrl.dispose();
+    _timer?.cancel();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    final current = widget.mediaItems.isNotEmpty
+        ? widget.mediaItems[_index % widget.mediaItems.length]
+        : DisplayMediaItem(
+            id: 0,
+            fileName: '',
+            url: widget.mediaUrl,
+            type: widget.mediaType,
+          );
+    final url = _absoluteUrl(current.url);
+    final type = current.type.toLowerCase();
     return Scaffold(
       backgroundColor: Colors.black,
-      body: FadeTransition(
-        opacity: _fadeAnim,
+      body: AnimatedSwitcher(
+        duration:
+            Duration(milliseconds: (widget.transitionSpeedSeconds * 1000).round()),
+        transitionBuilder: _transitionBuilder,
         child: Stack(
+          key: ValueKey('${current.id}-${current.url}'),
           fit: StackFit.expand,
           children: [
             // ── Media content ─────────────────────────────────────────
-            if (widget.mediaType == 'image')
+            if (type == 'image')
               Image.network(
-                widget.mediaUrl,
+                url,
                 fit: BoxFit.cover,
                 width: double.infinity,
                 height: double.infinity,
@@ -64,7 +106,7 @@ class _MediaScreenState extends State<MediaScreen>
             else
               // Video support — uncomment after adding video_player to pubspec.yaml
               // VideoPlayerWidget(url: widget.mediaUrl),
-              _VideoPlaceholder(url: widget.mediaUrl),
+              _VideoPlaceholder(url: url),
 
             // ── Subtle bottom mascot ──────────────────────────────────
             const Positioned(
@@ -78,6 +120,38 @@ class _MediaScreenState extends State<MediaScreen>
       ),
     );
   }
+
+  Widget _transitionBuilder(Widget child, Animation<double> animation) {
+    switch (widget.transitionStyle.toLowerCase()) {
+      case 'slide':
+        return SlideTransition(
+          position: Tween<Offset>(
+            begin: const Offset(0.08, 0),
+            end: Offset.zero,
+          ).animate(animation),
+          child: FadeTransition(opacity: animation, child: child),
+        );
+      case 'zoom':
+        return ScaleTransition(
+          scale: Tween<double>(begin: 0.96, end: 1).animate(animation),
+          child: FadeTransition(opacity: animation, child: child),
+        );
+      case 'flip':
+        return RotationTransition(
+          turns: Tween<double>(begin: -0.01, end: 0).animate(animation),
+          child: FadeTransition(opacity: animation, child: child),
+        );
+      case 'fade':
+      default:
+        return FadeTransition(opacity: animation, child: child);
+    }
+  }
+
+  String _absoluteUrl(String url) {
+    if (url.startsWith('http')) return url;
+    final path = url.startsWith('/') ? url.substring(1) : url;
+    return 'http://192.168.29.184:3002/$path';
+  }
 }
 
 class _VideoPlaceholder extends StatelessWidget {
@@ -86,34 +160,71 @@ class _VideoPlaceholder extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      color: Colors.black,
-      child: Center(
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.play_circle_outline, color: AppTheme.gold, size: 80),
-            const SizedBox(height: 16),
+    return _VideoPlayer(url: url);
+  }
+}
 
-            Text(
-              'Video Display',
-              style: GoogleFonts.playfairDisplay(
-                fontSize: 28,
-                color: AppTheme.white,
-              ),
-            ),
+class _VideoPlayer extends StatefulWidget {
+  final String url;
+  const _VideoPlayer({required this.url});
 
-            const SizedBox(height: 8),
+  @override
+  State<_VideoPlayer> createState() => _VideoPlayerState();
+}
 
-            Text(
-              'Add video_player package to enable video playback',
-              style: GoogleFonts.nunito(
-                color: AppTheme.whiteDim,
-                fontSize: 14,
-              ),
-            ),
-          ],
-        ),
+class _VideoPlayerState extends State<_VideoPlayer> {
+  late VideoPlayerController _controller;
+  bool _failed = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  @override
+  void didUpdateWidget(_VideoPlayer oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.url != widget.url) {
+      _controller.dispose();
+      _load();
+    }
+  }
+
+  void _load() {
+    _failed = false;
+    _controller = VideoPlayerController.networkUrl(Uri.parse(widget.url))
+      ..setLooping(true)
+      ..initialize().then((_) {
+        if (!mounted) return;
+        setState(() {});
+        _controller.play();
+      }).catchError((_) {
+        if (!mounted) return;
+        setState(() => _failed = true);
+      });
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (_failed) return const _MediaError();
+    if (!_controller.value.isInitialized) {
+      return const Center(
+        child: CircularProgressIndicator(color: AppTheme.gold),
+      );
+    }
+    return FittedBox(
+      fit: BoxFit.cover,
+      child: SizedBox(
+        width: _controller.value.size.width,
+        height: _controller.value.size.height,
+        child: VideoPlayer(_controller),
       ),
     );
   }
