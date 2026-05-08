@@ -115,10 +115,10 @@ class _RowContent extends StatelessWidget {
     final imageBlock = Flexible(
       flex: 0,
       child: _ImageCircle(
-      item: item,
-      catTheme: catTheme,
-      size: imageSize,
-      imageOnLeft: imageOnLeft,
+        item: item,
+        catTheme: catTheme,
+        size: imageSize,
+        imageOnLeft: imageOnLeft,
       ),
     );
 
@@ -253,6 +253,7 @@ class _TextBlock extends StatelessWidget {
     final alignment =
         imageOnLeft ? CrossAxisAlignment.start : CrossAxisAlignment.end;
     final textAlign = imageOnLeft ? TextAlign.left : TextAlign.right;
+    final hasPriceVariants = item.priceVariants.isNotEmpty;
 
     return Padding(
       padding: EdgeInsets.only(
@@ -273,40 +274,59 @@ class _TextBlock extends StatelessWidget {
                 crossAxisAlignment: alignment,
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Row(
-                    mainAxisAlignment: imageOnLeft
-                        ? MainAxisAlignment.start
-                        : MainAxisAlignment.end,
-                    crossAxisAlignment: CrossAxisAlignment.baseline,
-                    textBaseline: TextBaseline.alphabetic,
-                    children: imageOnLeft
-                        ? [
+                  hasPriceVariants
+                      ? Column(
+                          crossAxisAlignment: alignment,
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
                             _NameText(
                               item: item,
                               theme: theme,
                               fontSize: nameFontSize,
+                              flexible: false,
                             ),
-                            const SizedBox(width: 16),
+                            SizedBox(height: titleGap),
                             _PriceText(
                               item: item,
                               catTheme: catTheme,
                               fontSize: priceFontSize,
-                            ),
-                          ]
-                        : [
-                            _PriceText(
-                              item: item,
-                              catTheme: catTheme,
-                              fontSize: priceFontSize,
-                            ),
-                            const SizedBox(width: 16),
-                            _NameText(
-                              item: item,
-                              theme: theme,
-                              fontSize: nameFontSize,
                             ),
                           ],
-                  ),
+                        )
+                      : Row(
+                          mainAxisAlignment: imageOnLeft
+                              ? MainAxisAlignment.start
+                              : MainAxisAlignment.end,
+                          crossAxisAlignment: CrossAxisAlignment.baseline,
+                          textBaseline: TextBaseline.alphabetic,
+                          children: imageOnLeft
+                              ? [
+                                  _NameText(
+                                    item: item,
+                                    theme: theme,
+                                    fontSize: nameFontSize,
+                                  ),
+                                  const SizedBox(width: 16),
+                                  _PriceText(
+                                    item: item,
+                                    catTheme: catTheme,
+                                    fontSize: priceFontSize,
+                                  ),
+                                ]
+                              : [
+                                  _PriceText(
+                                    item: item,
+                                    catTheme: catTheme,
+                                    fontSize: priceFontSize,
+                                  ),
+                                  const SizedBox(width: 16),
+                                  _NameText(
+                                    item: item,
+                                    theme: theme,
+                                    fontSize: nameFontSize,
+                                  ),
+                                ],
+                        ),
                   SizedBox(height: titleGap),
                   if (item.description != null)
                     Text(
@@ -395,28 +415,30 @@ class _NameText extends StatelessWidget {
   final MenuItem item;
   final TvMenuThemeData theme;
   final double fontSize;
+  final bool flexible;
 
   const _NameText({
     required this.item,
     required this.theme,
     required this.fontSize,
+    this.flexible = true,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Flexible(
-      child: Text(
-        item.name,
-        style: GoogleFonts.playfairDisplay(
-          fontSize: fontSize,
-          fontWeight: FontWeight.w700,
-          color: theme.primaryText,
-          height: 1.15,
-        ),
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
+    final text = Text(
+      item.name,
+      style: GoogleFonts.playfairDisplay(
+        fontSize: fontSize,
+        fontWeight: FontWeight.w700,
+        color: theme.primaryText,
+        height: 1.15,
       ),
+      maxLines: 1,
+      overflow: TextOverflow.ellipsis,
     );
+
+    return flexible ? Flexible(child: text) : text;
   }
 }
 
@@ -433,13 +455,21 @@ class _PriceText extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final text = item.priceVariants.isNotEmpty
+        ? item.priceVariants
+            .map((variant) =>
+                '${variant.label} Rs. ${variant.price.toStringAsFixed(0)}')
+            .join('  ')
+        : 'Rs. ${item.price.toStringAsFixed(0)}';
     return Text(
-      'Rs. ${item.price.toStringAsFixed(0)}',
+      text,
       style: GoogleFonts.playfairDisplay(
-        fontSize: fontSize,
+        fontSize: item.priceVariants.isNotEmpty ? fontSize * 0.72 : fontSize,
         fontWeight: FontWeight.w700,
         color: catTheme.accent,
       ),
+      maxLines: 2,
+      overflow: TextOverflow.ellipsis,
     );
   }
 }

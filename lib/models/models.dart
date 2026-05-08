@@ -233,6 +233,7 @@ class MenuItem {
   final String name;
   final String? description;
   final double price;
+  final List<PriceVariant> priceVariants;
   final String? imageUrl;
   final MenuCategory category;
   final int? categoryId;
@@ -247,6 +248,7 @@ class MenuItem {
     required this.name,
     this.description,
     required this.price,
+    this.priceVariants = const [],
     this.imageUrl,
     required this.category,
     this.categoryId,
@@ -263,6 +265,10 @@ class MenuItem {
       name: json['name'] as String,
       description: json['description'] as String?,
       price: (json['price'] as num).toDouble(),
+      priceVariants: (json['priceVariants'] as List? ?? [])
+          .whereType<Map<String, dynamic>>()
+          .map(PriceVariant.fromJson)
+          .toList(),
       imageUrl: json['imageUrl'] as String?,
       category: MenuCategory.values.firstWhere(
         (e) => e.name == json['category'],
@@ -284,6 +290,7 @@ class MenuItem {
         'name': name,
         'description': description,
         'price': price,
+        'priceVariants': priceVariants.map((variant) => variant.toJson()).toList(),
         'imageUrl': imageUrl,
         'category': category.name,
         'categoryId': categoryId,
@@ -292,6 +299,28 @@ class MenuItem {
         'isFeatured': isFeatured,
         'tags': tags,
         'originalPrice': originalPrice,
+      };
+}
+
+class PriceVariant {
+  final String label;
+  final double price;
+
+  const PriceVariant({
+    required this.label,
+    required this.price,
+  });
+
+  factory PriceVariant.fromJson(Map<String, dynamic> json) {
+    return PriceVariant(
+      label: json['label'] as String? ?? '',
+      price: (json['price'] as num).toDouble(),
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+        'label': label,
+        'price': price,
       };
 }
 

@@ -96,6 +96,8 @@ class _CardContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final hasPriceVariants = item.priceVariants.isNotEmpty;
+
     return Container(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(20),
@@ -139,7 +141,8 @@ class _CardContent extends StatelessWidget {
                       ? Image.network(
                           item.imageUrl!,
                           fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) => _PlaceholderImage(catTheme: catTheme),
+                          errorBuilder: (_, __, ___) =>
+                              _PlaceholderImage(catTheme: catTheme),
                           loadingBuilder: (_, child, progress) {
                             if (progress == null) return child;
                             return _PlaceholderImage(catTheme: catTheme);
@@ -224,7 +227,7 @@ class _CardContent extends StatelessWidget {
                         color: AppTheme.white,
                         height: 1.2,
                       ),
-                      maxLines: 1,
+                      maxLines: hasPriceVariants ? 2 : 1,
                       overflow: TextOverflow.ellipsis,
                     ),
 
@@ -243,51 +246,58 @@ class _CardContent extends StatelessWidget {
                       ),
 
                     // Price row
-                    Row(
-                      children: [
-                        Text(
-                          '₹${item.price.toStringAsFixed(0)}',
-                          style: TextStyle(
-                            fontFamily: GoogleFonts.nunito().fontFamily,
-                            fontSize: 18 * fontScale,
-                            fontWeight: FontWeight.w900,
-                            color: catTheme.accent,
-                          ),
-                        ),
-                        if (item.originalPrice != null) ...[
-                          const SizedBox(width: 6),
-                          Text(
-                            '₹${item.originalPrice!.toStringAsFixed(0)}',
-                            style: TextStyle(
-                              fontFamily: GoogleFonts.nunito().fontFamily,
-                              fontSize: 11 * fontScale,
-                              color: AppTheme.whiteDim,
-                              decoration: TextDecoration.lineThrough,
-                            ),
-                          ),
-                        ],
-                        const Spacer(),
-                        // Tags
-                        if (item.tags.isNotEmpty)
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 6, vertical: 2),
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(6),
-                              color: catTheme.primary.withOpacity(0.15),
-                            ),
-                            child: Text(
-                              item.tags.first,
-                              style: TextStyle(
-                                fontFamily: GoogleFonts.nunito().fontFamily,
-                                fontSize: 9 * fontScale,
-                                color: catTheme.accent,
-                                fontWeight: FontWeight.w700,
+                    hasPriceVariants
+                        ? _VariantPriceText(
+                            item: item,
+                            catTheme: catTheme,
+                            fontScale: fontScale,
+                          )
+                        : Row(
+                            children: [
+                              Text(
+                                '₹${item.price.toStringAsFixed(0)}',
+                                style: TextStyle(
+                                  fontFamily: GoogleFonts.nunito().fontFamily,
+                                  fontSize: 18 * fontScale,
+                                  fontWeight: FontWeight.w900,
+                                  color: catTheme.accent,
+                                ),
                               ),
-                            ),
+                              if (item.originalPrice != null) ...[
+                                const SizedBox(width: 6),
+                                Text(
+                                  '₹${item.originalPrice!.toStringAsFixed(0)}',
+                                  style: TextStyle(
+                                    fontFamily: GoogleFonts.nunito().fontFamily,
+                                    fontSize: 11 * fontScale,
+                                    color: AppTheme.whiteDim,
+                                    decoration: TextDecoration.lineThrough,
+                                  ),
+                                ),
+                              ],
+                              const Spacer(),
+                              // Tags
+                              if (item.tags.isNotEmpty)
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 6, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(6),
+                                    color: catTheme.primary.withOpacity(0.15),
+                                  ),
+                                  child: Text(
+                                    item.tags.first,
+                                    style: TextStyle(
+                                      fontFamily:
+                                          GoogleFonts.nunito().fontFamily,
+                                      fontSize: 9 * fontScale,
+                                      color: catTheme.accent,
+                                      fontWeight: FontWeight.w700,
+                                    ),
+                                  ),
+                                ),
+                            ],
                           ),
-                      ],
-                    ),
                   ],
                 ),
               ),
@@ -295,6 +305,39 @@ class _CardContent extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+}
+
+class _VariantPriceText extends StatelessWidget {
+  final MenuItem item;
+  final CategoryTheme catTheme;
+  final double fontScale;
+
+  const _VariantPriceText({
+    required this.item,
+    required this.catTheme,
+    required this.fontScale,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final text = item.priceVariants
+        .map((variant) =>
+            '${variant.label} Rs. ${variant.price.toStringAsFixed(0)}')
+        .join('  ');
+
+    return Text(
+      text,
+      style: TextStyle(
+        fontFamily: GoogleFonts.nunito().fontFamily,
+        fontSize: 12 * fontScale,
+        fontWeight: FontWeight.w900,
+        color: catTheme.accent,
+        height: 1.2,
+      ),
+      maxLines: 2,
+      overflow: TextOverflow.ellipsis,
     );
   }
 }

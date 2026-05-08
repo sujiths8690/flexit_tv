@@ -97,7 +97,7 @@ class _MenuBoardScreenState extends State<MenuBoardScreen>
     return items
         .map(
           (item) =>
-              '${item.id}:${item.name}:${item.price}:${item.imageUrl ?? ''}:${item.categoryId ?? ''}',
+              '${item.id}:${item.name}:${item.price}:${item.priceVariants.map((variant) => '${variant.label}-${variant.price}').join(',')}:${item.imageUrl ?? ''}:${item.categoryId ?? ''}',
         )
         .join('|');
   }
