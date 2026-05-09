@@ -9,6 +9,7 @@ import 'dart:async';
 import 'package:video_player/video_player.dart';
 import '../models/models.dart';
 import '../theme/app_theme.dart';
+import '../widgets/business_brand_mark.dart';
 import '../widgets/mascot_widget.dart';
 
 class MediaScreen extends StatefulWidget {
@@ -18,6 +19,10 @@ class MediaScreen extends StatefulWidget {
   final int slideDurationSeconds;
   final String transitionStyle;
   final double transitionSpeedSeconds;
+  final String? businessName;
+  final String? businessLogoUrl;
+  final bool showLogo;
+  final bool showCompanyName;
 
   const MediaScreen({
     super.key,
@@ -27,14 +32,17 @@ class MediaScreen extends StatefulWidget {
     this.slideDurationSeconds = 8,
     this.transitionStyle = 'fade',
     this.transitionSpeedSeconds = 0.5,
+    this.businessName,
+    this.businessLogoUrl,
+    this.showLogo = true,
+    this.showCompanyName = true,
   });
 
   @override
   State<MediaScreen> createState() => _MediaScreenState();
 }
 
-class _MediaScreenState extends State<MediaScreen>
-{
+class _MediaScreenState extends State<MediaScreen> {
   Timer? _timer;
   int _index = 0;
 
@@ -87,8 +95,8 @@ class _MediaScreenState extends State<MediaScreen>
     return Scaffold(
       backgroundColor: Colors.black,
       body: AnimatedSwitcher(
-        duration:
-            Duration(milliseconds: (widget.transitionSpeedSeconds * 1000).round()),
+        duration: Duration(
+            milliseconds: (widget.transitionSpeedSeconds * 1000).round()),
         transitionBuilder: _transitionBuilder,
         child: Stack(
           key: ValueKey('${current.id}-${current.url}'),
@@ -115,6 +123,13 @@ class _MediaScreenState extends State<MediaScreen>
               right: 0,
               child: MascotWidget(),
             ),
+            if (widget.showLogo || widget.showCompanyName)
+              BusinessBrandMark(
+                businessName:
+                    widget.showCompanyName ? widget.businessName : null,
+                logoUrl: widget.showLogo ? widget.businessLogoUrl : null,
+                darkBackdrop: true,
+              ),
           ],
         ),
       ),
@@ -247,7 +262,6 @@ class _MediaError extends StatelessWidget {
               size: 60,
             ),
             const SizedBox(height: 16),
-
             Text(
               'Media unavailable',
               style: GoogleFonts.nunito(

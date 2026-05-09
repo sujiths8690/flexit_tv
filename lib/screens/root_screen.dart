@@ -79,6 +79,10 @@ class _RootScreenState extends State<RootScreen> {
         slideDurationSeconds: display.autoScrollIntervalSeconds ?? 8,
         transitionStyle: display.transitionStyle,
         transitionSpeedSeconds: display.transitionSpeedSeconds,
+        businessName: config.businessName,
+        businessLogoUrl: config.businessLogoUrl,
+        showLogo: display.showLogo,
+        showCompanyName: display.showCompanyName,
       );
     }
 

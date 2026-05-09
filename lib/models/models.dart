@@ -126,6 +126,11 @@ class DisplayConfig {
   final String transitionStyle;
   final double transitionSpeedSeconds;
   final int? autoScrollIntervalSeconds;
+  final bool showPrice;
+  final bool showDescription;
+  final bool showLogo;
+  final bool showCompanyName;
+  final bool showProductImage;
   final List<DisplayMediaItem> mediaItems;
   final List<MenuItem> menuItems;
 
@@ -142,6 +147,11 @@ class DisplayConfig {
     this.transitionStyle = 'fade',
     this.transitionSpeedSeconds = 0.5,
     this.autoScrollIntervalSeconds,
+    this.showPrice = true,
+    this.showDescription = true,
+    this.showLogo = true,
+    this.showCompanyName = true,
+    this.showProductImage = true,
     this.mediaItems = const [],
     this.menuItems = const [],
   });
@@ -169,6 +179,11 @@ class DisplayConfig {
       transitionSpeedSeconds:
           (json['transitionSpeedSeconds'] as num?)?.toDouble() ?? 0.5,
       autoScrollIntervalSeconds: json['autoScrollIntervalSeconds'] as int?,
+      showPrice: json['showPrice'] as bool? ?? true,
+      showDescription: json['showDescription'] as bool? ?? true,
+      showLogo: json['showLogo'] as bool? ?? true,
+      showCompanyName: json['showCompanyName'] as bool? ?? true,
+      showProductImage: json['showProductImage'] as bool? ?? true,
       mediaItems: (json['mediaItems'] as List? ?? [])
           .whereType<Map<String, dynamic>>()
           .map(DisplayMediaItem.fromJson)
@@ -193,6 +208,11 @@ class DisplayConfig {
         'transitionStyle': transitionStyle,
         'transitionSpeedSeconds': transitionSpeedSeconds,
         'autoScrollIntervalSeconds': autoScrollIntervalSeconds,
+        'showPrice': showPrice,
+        'showDescription': showDescription,
+        'showLogo': showLogo,
+        'showCompanyName': showCompanyName,
+        'showProductImage': showProductImage,
         'mediaItems': mediaItems.map((item) => item.toJson()).toList(),
         'menuItems': menuItems.map((item) => item.toJson()).toList(),
       };
@@ -290,7 +310,8 @@ class MenuItem {
         'name': name,
         'description': description,
         'price': price,
-        'priceVariants': priceVariants.map((variant) => variant.toJson()).toList(),
+        'priceVariants':
+            priceVariants.map((variant) => variant.toJson()).toList(),
         'imageUrl': imageUrl,
         'category': category.name,
         'categoryId': categoryId,

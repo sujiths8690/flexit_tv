@@ -16,6 +16,9 @@ class MenuItemRow extends StatefulWidget {
   final Duration animationDelay;
   final double screenWidth;
   final double rowHeight;
+  final bool showPrice;
+  final bool showDescription;
+  final bool showProductImage;
 
   const MenuItemRow({
     super.key,
@@ -26,6 +29,9 @@ class MenuItemRow extends StatefulWidget {
     required this.animationDelay,
     required this.screenWidth,
     required this.rowHeight,
+    this.showPrice = true,
+    this.showDescription = true,
+    this.showProductImage = true,
   });
 
   @override
@@ -75,6 +81,9 @@ class _MenuItemRowState extends State<MenuItemRow>
           imageOnLeft: widget.imageOnLeft,
           screenWidth: widget.screenWidth,
           rowHeight: widget.rowHeight,
+          showPrice: widget.showPrice,
+          showDescription: widget.showDescription,
+          showProductImage: widget.showProductImage,
         ),
       ),
     );
@@ -88,6 +97,9 @@ class _RowContent extends StatelessWidget {
   final bool imageOnLeft;
   final double screenWidth;
   final double rowHeight;
+  final bool showPrice;
+  final bool showDescription;
+  final bool showProductImage;
 
   const _RowContent({
     required this.item,
@@ -96,6 +108,9 @@ class _RowContent extends StatelessWidget {
     required this.imageOnLeft,
     required this.screenWidth,
     required this.rowHeight,
+    required this.showPrice,
+    required this.showDescription,
+    required this.showProductImage,
   });
 
   double get imageSize =>
@@ -111,16 +126,20 @@ class _RowContent extends StatelessWidget {
       imageOnLeft: imageOnLeft,
       screenWidth: screenWidth,
       rowHeight: rowHeight,
+      showPrice: showPrice,
+      showDescription: showDescription,
     );
-    final imageBlock = Flexible(
-      flex: 0,
-      child: _ImageCircle(
-        item: item,
-        catTheme: catTheme,
-        size: imageSize,
-        imageOnLeft: imageOnLeft,
-      ),
-    );
+    final imageBlock = showProductImage
+        ? Flexible(
+            flex: 0,
+            child: _ImageCircle(
+              item: item,
+              catTheme: catTheme,
+              size: imageSize,
+              imageOnLeft: imageOnLeft,
+            ),
+          )
+        : const SizedBox.shrink();
 
     return SizedBox(
       height: rowHeight,
@@ -129,8 +148,14 @@ class _RowContent extends StatelessWidget {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: imageOnLeft
-              ? [imageBlock, Expanded(child: textBlock)]
-              : [Expanded(child: textBlock), imageBlock],
+              ? [
+                  if (showProductImage) imageBlock,
+                  Expanded(child: textBlock),
+                ]
+              : [
+                  Expanded(child: textBlock),
+                  if (showProductImage) imageBlock,
+                ],
         ),
       ),
     );
@@ -227,6 +252,8 @@ class _TextBlock extends StatelessWidget {
   final bool imageOnLeft;
   final double screenWidth;
   final double rowHeight;
+  final bool showPrice;
+  final bool showDescription;
 
   const _TextBlock({
     required this.item,
@@ -235,6 +262,8 @@ class _TextBlock extends StatelessWidget {
     required this.imageOnLeft,
     required this.screenWidth,
     required this.rowHeight,
+    required this.showPrice,
+    required this.showDescription,
   });
 
   double get _rowScale => (rowHeight / 190).clamp(0.78, 1.0);
@@ -286,11 +315,12 @@ class _TextBlock extends StatelessWidget {
                               flexible: false,
                             ),
                             SizedBox(height: titleGap),
-                            _PriceText(
-                              item: item,
-                              catTheme: catTheme,
-                              fontSize: priceFontSize,
-                            ),
+                            if (showPrice)
+                              _PriceText(
+                                item: item,
+                                catTheme: catTheme,
+                                fontSize: priceFontSize,
+                              ),
                           ],
                         )
                       : Row(
@@ -306,20 +336,24 @@ class _TextBlock extends StatelessWidget {
                                     theme: theme,
                                     fontSize: nameFontSize,
                                   ),
-                                  const SizedBox(width: 16),
-                                  _PriceText(
-                                    item: item,
-                                    catTheme: catTheme,
-                                    fontSize: priceFontSize,
-                                  ),
+                                  if (showPrice) ...[
+                                    const SizedBox(width: 16),
+                                    _PriceText(
+                                      item: item,
+                                      catTheme: catTheme,
+                                      fontSize: priceFontSize,
+                                    ),
+                                  ],
                                 ]
                               : [
-                                  _PriceText(
-                                    item: item,
-                                    catTheme: catTheme,
-                                    fontSize: priceFontSize,
-                                  ),
-                                  const SizedBox(width: 16),
+                                  if (showPrice) ...[
+                                    _PriceText(
+                                      item: item,
+                                      catTheme: catTheme,
+                                      fontSize: priceFontSize,
+                                    ),
+                                    const SizedBox(width: 16),
+                                  ],
                                   _NameText(
                                     item: item,
                                     theme: theme,
@@ -328,7 +362,7 @@ class _TextBlock extends StatelessWidget {
                                 ],
                         ),
                   SizedBox(height: titleGap),
-                  if (item.description != null)
+                  if (showDescription && item.description != null)
                     Text(
                       item.description!,
                       style: GoogleFonts.nunito(

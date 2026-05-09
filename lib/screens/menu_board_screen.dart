@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../models/models.dart';
 import '../theme/app_theme.dart';
+import '../widgets/business_brand_mark.dart';
 import '../widgets/menu_item_row.dart';
 
 class MenuBoardScreen extends StatefulWidget {
@@ -79,9 +80,16 @@ class _MenuBoardScreenState extends State<MenuBoardScreen>
             widget.displayConfig.themeOverride ||
         _contentSignature !=
             _buildContentSignature(widget.displayConfig.menuItems) ||
-        oldWidget.displayConfig.contentMode != widget.displayConfig.contentMode ||
-        oldWidget.config.menuTheme != widget.config.menuTheme) {
-      _contentSignature = _buildContentSignature(widget.displayConfig.menuItems);
+        oldWidget.displayConfig.contentMode !=
+            widget.displayConfig.contentMode ||
+        oldWidget.config.menuTheme != widget.config.menuTheme ||
+        oldWidget.displayConfig.showPrice != widget.displayConfig.showPrice ||
+        oldWidget.displayConfig.showDescription !=
+            widget.displayConfig.showDescription ||
+        oldWidget.displayConfig.showProductImage !=
+            widget.displayConfig.showProductImage) {
+      _contentSignature =
+          _buildContentSignature(widget.displayConfig.menuItems);
       _fadeCtrl.reset();
       _loadItems();
       _fadeCtrl.forward();
@@ -187,6 +195,7 @@ class _MenuBoardScreenState extends State<MenuBoardScreen>
       child: Scaffold(
         backgroundColor: theme.background,
         body: Stack(
+          fit: StackFit.expand,
           children: [
             Positioned.fill(
               child: _AnimatedMenuBackground(
@@ -208,12 +217,33 @@ class _MenuBoardScreenState extends State<MenuBoardScreen>
                       transitionStyle: widget.displayConfig.transitionStyle,
                       transitionSpeedSeconds:
                           widget.displayConfig.transitionSpeedSeconds,
+                      showPrice: widget.displayConfig.showPrice,
+                      showDescription: widget.displayConfig.showDescription,
+                      showProductImage: widget.displayConfig.showProductImage,
                     ),
             ),
+            if (_shouldShowBrandMark)
+              BusinessBrandMark(
+                businessName: widget.displayConfig.showCompanyName
+                    ? widget.config.businessName
+                    : null,
+                logoUrl: widget.displayConfig.showLogo
+                    ? widget.config.businessLogoUrl
+                    : null,
+                darkBackdrop: theme.isDark,
+              ),
           ],
         ),
       ),
     );
+  }
+
+  bool get _shouldShowBrandMark {
+    final hasVisibleName = widget.displayConfig.showCompanyName &&
+        (widget.config.businessName?.trim().isNotEmpty ?? false);
+    final hasVisibleLogo = widget.displayConfig.showLogo &&
+        (widget.config.businessLogoUrl?.trim().isNotEmpty ?? false);
+    return hasVisibleName || hasVisibleLogo;
   }
 }
 
@@ -226,6 +256,9 @@ class _PagedMenu extends StatelessWidget {
   final Size screenSize;
   final String transitionStyle;
   final double transitionSpeedSeconds;
+  final bool showPrice;
+  final bool showDescription;
+  final bool showProductImage;
 
   const _PagedMenu({
     required this.items,
@@ -236,6 +269,9 @@ class _PagedMenu extends StatelessWidget {
     required this.screenSize,
     required this.transitionStyle,
     required this.transitionSpeedSeconds,
+    required this.showPrice,
+    required this.showDescription,
+    required this.showProductImage,
   });
 
   static const double _verticalPadding = 56;
@@ -283,6 +319,9 @@ class _PagedMenu extends StatelessWidget {
           animationDelay: Duration(milliseconds: i * 100),
           screenWidth: screenSize.width,
           rowHeight: rowHeight,
+          showPrice: showPrice,
+          showDescription: showDescription,
+          showProductImage: showProductImage,
         ),
       );
 
