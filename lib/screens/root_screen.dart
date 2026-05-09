@@ -72,17 +72,27 @@ class _RootScreenState extends State<RootScreen> {
 
     // ── Media mode ────────────────────────────────────────────────────────
     if (display.mode == DisplayMode.media) {
-      return MediaScreen(
-        mediaUrl: display.mediaUrl ?? '',
-        mediaType: display.mediaType ?? 'image',
-        mediaItems: display.mediaItems,
-        slideDurationSeconds: display.autoScrollIntervalSeconds ?? 8,
-        transitionStyle: display.transitionStyle,
-        transitionSpeedSeconds: display.transitionSpeedSeconds,
-        businessName: config.businessName,
-        businessLogoUrl: config.businessLogoUrl,
-        showLogo: display.showLogo,
-        showCompanyName: display.showCompanyName,
+      return LayoutBuilder(
+        builder: (context, constraints) {
+          final screenSize = Size(constraints.maxWidth, constraints.maxHeight);
+          final media = MediaScreen(
+            mediaUrl: display.mediaUrl ?? '',
+            mediaType: display.mediaType ?? 'image',
+            mediaItems: display.mediaItems,
+            slideDurationSeconds: display.autoScrollIntervalSeconds ?? 8,
+            transitionStyle: display.transitionStyle,
+            transitionSpeedSeconds: display.transitionSpeedSeconds,
+            businessName: config.businessName,
+            businessLogoUrl: config.businessLogoUrl,
+            showLogo: display.showLogo,
+            showCompanyName: display.showCompanyName,
+          );
+          return OrientationHelper.applyTransform(
+            orientation: config.orientation,
+            screenSize: screenSize,
+            child: media,
+          );
+        },
       );
     }
 

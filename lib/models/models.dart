@@ -188,10 +188,7 @@ class DisplayConfig {
           .whereType<Map<String, dynamic>>()
           .map(DisplayMediaItem.fromJson)
           .toList(),
-      menuItems: (json['menuItems'] as List? ?? [])
-          .whereType<Map<String, dynamic>>()
-          .map(MenuItem.fromJson)
-          .toList(),
+      menuItems: _parseMenuItems(json['menuItems'] as List? ?? []),
     );
   }
 
@@ -248,6 +245,18 @@ class DisplayMediaItem {
       };
 }
 
+List<MenuItem> _parseMenuItems(List<dynamic> items) {
+  final parsed = <MenuItem>[];
+  for (final item in items.whereType<Map<String, dynamic>>()) {
+    try {
+      parsed.add(MenuItem.fromJson(item));
+    } catch (_) {
+      // Skip malformed menu/combo items so one bad payload does not unpair TV.
+    }
+  }
+  return parsed;
+}
+
 class MenuItem {
   final String id;
   final String name;
@@ -262,6 +271,7 @@ class MenuItem {
   final bool isFeatured;
   final List<String> tags;
   final double? originalPrice; // for strike-through discount display
+  final List<ComboOfferItem> comboItems;
 
   const MenuItem({
     required this.id,
@@ -277,11 +287,12 @@ class MenuItem {
     this.isFeatured = false,
     this.tags = const [],
     this.originalPrice,
+    this.comboItems = const [],
   });
 
   factory MenuItem.fromJson(Map<String, dynamic> json) {
     return MenuItem(
-      id: json['id'] as String,
+      id: json['id'].toString(),
       name: json['name'] as String,
       description: json['description'] as String?,
       price: (json['price'] as num).toDouble(),
@@ -289,7 +300,7 @@ class MenuItem {
           .whereType<Map<String, dynamic>>()
           .map(PriceVariant.fromJson)
           .toList(),
-      imageUrl: json['imageUrl'] as String?,
+      imageUrl: _parseImageUrl(json['imageUrl'] as String?),
       category: MenuCategory.values.firstWhere(
         (e) => e.name == json['category'],
         orElse: () => MenuCategory.all,
@@ -299,9 +310,18 @@ class MenuItem {
       isAvailable: json['isAvailable'] as bool? ?? true,
       isFeatured: json['isFeatured'] as bool? ?? false,
       tags: List<String>.from(json['tags'] as List? ?? []),
-      originalPrice: json['originalPrice'] != null
-          ? (json['originalPrice'] as num).toDouble()
+      originalPrice: (json['originalPrice'] ??
+                  json['actualPrice'] ??
+                  json['totalActualPrice']) !=
+              null
+          ? ((json['originalPrice'] ??
+                  json['actualPrice'] ??
+                  json['totalActualPrice']) as num)
+              .toDouble()
           : null,
+      comboItems: _parseComboOfferItems(
+        (json['comboItems'] ?? json['items']) as List? ?? [],
+      ),
     );
   }
 
@@ -320,6 +340,63 @@ class MenuItem {
         'isFeatured': isFeatured,
         'tags': tags,
         'originalPrice': originalPrice,
+        'comboItems': comboItems.map((item) => item.toJson()).toList(),
+      };
+}
+
+String? _parseImageUrl(String? url) {
+  final value = url?.trim();
+  if (value == null || value.isEmpty) return null;
+  if (value.startsWith('http')) return value;
+  final path = value.startsWith('/') ? value.substring(1) : value;
+  return 'http://192.168.29.184:3002/$path';
+}
+
+List<ComboOfferItem> _parseComboOfferItems(List<dynamic> items) {
+  final parsed = <ComboOfferItem>[];
+  for (final item in items.whereType<Map<String, dynamic>>()) {
+    try {
+      parsed.add(ComboOfferItem.fromJson(item));
+    } catch (_) {
+      // Ignore malformed combo children instead of failing the whole display.
+    }
+  }
+  return parsed;
+}
+
+class ComboOfferItem {
+  final int id;
+  final int quantity;
+  final String? variantLabel;
+  final double? variantPrice;
+  final MenuItem product;
+
+  const ComboOfferItem({
+    required this.id,
+    required this.quantity,
+    this.variantLabel,
+    this.variantPrice,
+    required this.product,
+  });
+
+  factory ComboOfferItem.fromJson(Map<String, dynamic> json) {
+    final productJson =
+        (json['product'] ?? json['menuItem']) as Map<String, dynamic>;
+    return ComboOfferItem(
+      id: (json['id'] as num?)?.toInt() ?? 0,
+      quantity: (json['quantity'] as num?)?.toInt() ?? 1,
+      variantLabel: json['variantLabel'] as String?,
+      variantPrice: (json['variantPrice'] as num?)?.toDouble(),
+      product: MenuItem.fromJson(productJson),
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'quantity': quantity,
+        'variantLabel': variantLabel,
+        'variantPrice': variantPrice,
+        'product': product.toJson(),
       };
 }
 

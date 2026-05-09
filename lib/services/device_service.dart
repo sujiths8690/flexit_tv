@@ -20,6 +20,7 @@ class DeviceService extends ChangeNotifier {
 
   late String _deviceCode;
   DeviceConfig? _config;
+  bool _hasEverPaired = false;
   bool _isLoading = true;
   String? _error;
   Timer? _pollTimer;
@@ -69,17 +70,22 @@ class DeviceService extends ChangeNotifier {
       if (response.statusCode == 200) {
         final body = jsonDecode(response.body) as Map<String, dynamic>;
         final data = body['data'];
-        _config = data is Map<String, dynamic>
-            ? DeviceConfig.fromJson(data)
-            : _unpairedConfig();
+        if (data is Map<String, dynamic>) {
+          _config = DeviceConfig.fromJson(data);
+          if (_config?.isPaired == true) {
+            _hasEverPaired = true;
+          }
+        } else {
+          _config = _hasEverPaired ? _offlinePairedConfig() : _unpairedConfig();
+        }
       } else {
-        _config = _unpairedConfig();
+        _config = _hasEverPaired ? _offlinePairedConfig() : _unpairedConfig();
       }
 
       _isLoading = false;
       _error = null;
     } catch (_) {
-      _config = _unpairedConfig();
+      _config = _hasEverPaired ? _offlinePairedConfig() : _unpairedConfig();
       _isLoading = false;
       _error = null;
     }
@@ -99,6 +105,19 @@ class DeviceService extends ChangeNotifier {
       deviceCode: _deviceCode,
       isPaired: false,
       orientation: DisplayOrientation.normal,
+    );
+  }
+
+  DeviceConfig _offlinePairedConfig() {
+    return DeviceConfig(
+      deviceCode: _deviceCode,
+      isPaired: true,
+      businessName: _config?.businessName,
+      businessLogoUrl: _config?.businessLogoUrl,
+      orientation: _config?.orientation ?? DisplayOrientation.normal,
+      menuTheme: _config?.menuTheme,
+      themeColor: _config?.themeColor ?? 'gold',
+      displayConfig: null,
     );
   }
 }

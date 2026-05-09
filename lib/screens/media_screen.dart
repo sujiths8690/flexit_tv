@@ -10,7 +10,6 @@ import 'package:video_player/video_player.dart';
 import '../models/models.dart';
 import '../theme/app_theme.dart';
 import '../widgets/business_brand_mark.dart';
-import '../widgets/mascot_widget.dart';
 
 class MediaScreen extends StatefulWidget {
   final String mediaUrl;
@@ -55,11 +54,29 @@ class _MediaScreenState extends State<MediaScreen> {
   @override
   void didUpdateWidget(MediaScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.mediaItems != widget.mediaItems ||
-        oldWidget.slideDurationSeconds != widget.slideDurationSeconds) {
+    if (_playlistChanged(oldWidget.mediaItems, widget.mediaItems)) {
       _index = 0;
       _startTimer();
+    } else if (oldWidget.slideDurationSeconds != widget.slideDurationSeconds) {
+      _startTimer();
     }
+  }
+
+  bool _playlistChanged(
+    List<DisplayMediaItem> previous,
+    List<DisplayMediaItem> next,
+  ) {
+    if (previous.length != next.length) return true;
+    for (var i = 0; i < previous.length; i++) {
+      final oldItem = previous[i];
+      final newItem = next[i];
+      if (oldItem.id != newItem.id ||
+          oldItem.url != newItem.url ||
+          oldItem.type != newItem.type) {
+        return true;
+      }
+    }
+    return false;
   }
 
   void _startTimer() {
@@ -67,11 +84,13 @@ class _MediaScreenState extends State<MediaScreen> {
     if (widget.mediaItems.length <= 1) return;
     _timer = Timer.periodic(
       Duration(seconds: widget.slideDurationSeconds),
-      (_) {
-        if (!mounted) return;
-        setState(() => _index = (_index + 1) % widget.mediaItems.length);
-      },
+      (_) => _advanceMedia(),
     );
+  }
+
+  void _advanceMedia() {
+    if (!mounted || widget.mediaItems.length <= 1) return;
+    setState(() => _index = (_index + 1) % widget.mediaItems.length);
   }
 
   @override
@@ -106,7 +125,7 @@ class _MediaScreenState extends State<MediaScreen> {
             if (type == 'image')
               Image.network(
                 url,
-                fit: BoxFit.cover,
+                fit: BoxFit.contain,
                 width: double.infinity,
                 height: double.infinity,
                 errorBuilder: (_, __, ___) => const _MediaError(),
@@ -114,15 +133,12 @@ class _MediaScreenState extends State<MediaScreen> {
             else
               // Video support — uncomment after adding video_player to pubspec.yaml
               // VideoPlayerWidget(url: widget.mediaUrl),
-              _VideoPlaceholder(url: url),
+              _VideoPlaceholder(
+                url: url,
+                loop: widget.mediaItems.length <= 1,
+                onEnded: _advanceMedia,
+              ),
 
-            // ── Subtle bottom mascot ──────────────────────────────────
-            const Positioned(
-              bottom: 0,
-              left: 0,
-              right: 0,
-              child: MascotWidget(),
-            ),
             if (widget.showLogo || widget.showCompanyName)
               BusinessBrandMark(
                 businessName:
@@ -171,17 +187,35 @@ class _MediaScreenState extends State<MediaScreen> {
 
 class _VideoPlaceholder extends StatelessWidget {
   final String url;
-  const _VideoPlaceholder({required this.url});
+  final bool loop;
+  final VoidCallback onEnded;
+
+  const _VideoPlaceholder({
+    required this.url,
+    required this.loop,
+    required this.onEnded,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return _VideoPlayer(url: url);
+    return _VideoPlayer(
+      url: url,
+      loop: loop,
+      onEnded: onEnded,
+    );
   }
 }
 
 class _VideoPlayer extends StatefulWidget {
   final String url;
-  const _VideoPlayer({required this.url});
+  final bool loop;
+  final VoidCallback onEnded;
+
+  const _VideoPlayer({
+    required this.url,
+    required this.loop,
+    required this.onEnded,
+  });
 
   @override
   State<_VideoPlayer> createState() => _VideoPlayerState();
@@ -190,6 +224,7 @@ class _VideoPlayer extends StatefulWidget {
 class _VideoPlayerState extends State<_VideoPlayer> {
   late VideoPlayerController _controller;
   bool _failed = false;
+  bool _ended = false;
 
   @override
   void initState() {
@@ -200,7 +235,8 @@ class _VideoPlayerState extends State<_VideoPlayer> {
   @override
   void didUpdateWidget(_VideoPlayer oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (oldWidget.url != widget.url) {
+    if (oldWidget.url != widget.url || oldWidget.loop != widget.loop) {
+      _controller.removeListener(_handlePlaybackUpdate);
       _controller.dispose();
       _load();
     }
@@ -208,8 +244,10 @@ class _VideoPlayerState extends State<_VideoPlayer> {
 
   void _load() {
     _failed = false;
+    _ended = false;
     _controller = VideoPlayerController.networkUrl(Uri.parse(widget.url))
-      ..setLooping(true)
+      ..setLooping(widget.loop)
+      ..addListener(_handlePlaybackUpdate)
       ..initialize().then((_) {
         if (!mounted) return;
         setState(() {});
@@ -220,8 +258,20 @@ class _VideoPlayerState extends State<_VideoPlayer> {
       });
   }
 
+  void _handlePlaybackUpdate() {
+    if (widget.loop || _ended || !_controller.value.isInitialized) return;
+    final duration = _controller.value.duration;
+    final position = _controller.value.position;
+    if (duration == Duration.zero) return;
+    if (position >= duration - const Duration(milliseconds: 200)) {
+      _ended = true;
+      widget.onEnded();
+    }
+  }
+
   @override
   void dispose() {
+    _controller.removeListener(_handlePlaybackUpdate);
     _controller.dispose();
     super.dispose();
   }
@@ -235,7 +285,7 @@ class _VideoPlayerState extends State<_VideoPlayer> {
       );
     }
     return FittedBox(
-      fit: BoxFit.cover,
+      fit: BoxFit.contain,
       child: SizedBox(
         width: _controller.value.size.width,
         height: _controller.value.size.height,

@@ -9,6 +9,7 @@ import 'package:google_fonts/google_fonts.dart';
 import '../models/models.dart';
 import '../theme/app_theme.dart';
 import '../widgets/business_brand_mark.dart';
+import '../widgets/combo_offer_showcase.dart';
 import '../widgets/menu_item_row.dart';
 
 class MenuBoardScreen extends StatefulWidget {
@@ -105,7 +106,7 @@ class _MenuBoardScreenState extends State<MenuBoardScreen>
     return items
         .map(
           (item) =>
-              '${item.id}:${item.name}:${item.price}:${item.priceVariants.map((variant) => '${variant.label}-${variant.price}').join(',')}:${item.imageUrl ?? ''}:${item.categoryId ?? ''}',
+              '${item.id}:${item.name}:${item.price}:${item.originalPrice ?? ''}:${item.priceVariants.map((variant) => '${variant.label}-${variant.price}').join(',')}:${item.imageUrl ?? ''}:${item.categoryId ?? ''}:${item.comboItems.map((comboItem) => '${comboItem.product.id}-${comboItem.product.name}-${comboItem.product.price}-${comboItem.quantity}-${comboItem.product.imageUrl ?? ''}').join(',')}',
         )
         .join('|');
   }
@@ -151,6 +152,15 @@ class _MenuBoardScreenState extends State<MenuBoardScreen>
     _pageTimer?.cancel();
     _pageTimer = Timer.periodic(Duration(seconds: interval), (_) {
       if (!mounted || _items.isEmpty) return;
+      if (widget.displayConfig.contentMode == 'comboOffers') {
+        final offersPerPage = ComboOfferShowcase.offersPerPageFor(
+          widget.screenSize,
+        );
+        final pageCount = (_items.length / offersPerPage).ceil();
+        if (pageCount <= 1) return;
+        setState(() => _pageIndex = (_pageIndex + 1) % pageCount);
+        return;
+      }
       final itemsPerPage = _itemsPerPage(widget.screenSize);
       final pageCount = (_items.length / itemsPerPage).ceil();
       final visibleGroupCount =
@@ -207,6 +217,18 @@ class _MenuBoardScreenState extends State<MenuBoardScreen>
             Positioned.fill(
               child: _items.isEmpty
                   ? _EmptyState(catTheme: catTheme, theme: theme)
+                  : widget.displayConfig.contentMode == 'comboOffers'
+                      ? ComboOfferShowcase(
+                          combos: _items,
+                          pageIndex: _pageIndex,
+                          catTheme: catTheme,
+                          theme: theme,
+                          screenSize: widget.screenSize,
+                          transitionStyle:
+                              widget.displayConfig.transitionStyle,
+                          transitionSpeedSeconds:
+                              widget.displayConfig.transitionSpeedSeconds,
+                        )
                   : _PagedMenu(
                       items: _items,
                       pageIndex: _pageIndex,
