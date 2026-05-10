@@ -19,6 +19,9 @@ class MenuItemRow extends StatefulWidget {
   final bool showPrice;
   final bool showDescription;
   final bool showProductImage;
+  final double nameFontScale;
+  final double descriptionFontScale;
+  final double priceFontScale;
 
   const MenuItemRow({
     super.key,
@@ -32,6 +35,9 @@ class MenuItemRow extends StatefulWidget {
     this.showPrice = true,
     this.showDescription = true,
     this.showProductImage = true,
+    this.nameFontScale = 1.0,
+    this.descriptionFontScale = 1.0,
+    this.priceFontScale = 1.0,
   });
 
   @override
@@ -84,6 +90,9 @@ class _MenuItemRowState extends State<MenuItemRow>
           showPrice: widget.showPrice,
           showDescription: widget.showDescription,
           showProductImage: widget.showProductImage,
+          nameFontScale: widget.nameFontScale,
+          descriptionFontScale: widget.descriptionFontScale,
+          priceFontScale: widget.priceFontScale,
         ),
       ),
     );
@@ -100,6 +109,9 @@ class _RowContent extends StatelessWidget {
   final bool showPrice;
   final bool showDescription;
   final bool showProductImage;
+  final double nameFontScale;
+  final double descriptionFontScale;
+  final double priceFontScale;
 
   const _RowContent({
     required this.item,
@@ -111,6 +123,9 @@ class _RowContent extends StatelessWidget {
     required this.showPrice,
     required this.showDescription,
     required this.showProductImage,
+    required this.nameFontScale,
+    required this.descriptionFontScale,
+    required this.priceFontScale,
   });
 
   double get imageSize =>
@@ -128,6 +143,9 @@ class _RowContent extends StatelessWidget {
       rowHeight: rowHeight,
       showPrice: showPrice,
       showDescription: showDescription,
+      nameFontScale: nameFontScale,
+      descriptionFontScale: descriptionFontScale,
+      priceFontScale: priceFontScale,
     );
     final imageBlock = showProductImage
         ? Flexible(
@@ -303,6 +321,9 @@ class _TextBlock extends StatelessWidget {
   final double rowHeight;
   final bool showPrice;
   final bool showDescription;
+  final double nameFontScale;
+  final double descriptionFontScale;
+  final double priceFontScale;
 
   const _TextBlock({
     required this.item,
@@ -313,15 +334,22 @@ class _TextBlock extends StatelessWidget {
     required this.rowHeight,
     required this.showPrice,
     required this.showDescription,
+    required this.nameFontScale,
+    required this.descriptionFontScale,
+    required this.priceFontScale,
   });
 
   double get _rowScale => (rowHeight / 190).clamp(0.78, 1.0);
   double get nameFontSize =>
-      ((screenWidth * 0.022).clamp(18.0, 32.0) * _rowScale).clamp(16.0, 32.0);
+      ((screenWidth * 0.022).clamp(18.0, 32.0) * _rowScale * nameFontScale)
+          .clamp(14.0, 36.0);
   double get priceFontSize =>
-      ((screenWidth * 0.026).clamp(22.0, 38.0) * _rowScale).clamp(19.0, 38.0);
-  double get descFontSize =>
-      ((screenWidth * 0.013).clamp(11.0, 18.0) * _rowScale).clamp(10.0, 18.0);
+      ((screenWidth * 0.026).clamp(22.0, 38.0) * _rowScale * priceFontScale)
+          .clamp(17.0, 42.0);
+  double get descFontSize => ((screenWidth * 0.013).clamp(11.0, 18.0) *
+          _rowScale *
+          descriptionFontScale)
+      .clamp(9.0, 20.0);
   double get verticalPad => (rowHeight * 0.08).clamp(8.0, 16.0);
   double get titleGap => (rowHeight * 0.04).clamp(4.0, 8.0);
   double get metaGap => (rowHeight * 0.045).clamp(5.0, 9.0);

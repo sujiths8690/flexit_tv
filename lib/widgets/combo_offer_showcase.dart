@@ -12,6 +12,11 @@ class ComboOfferShowcase extends StatelessWidget {
   final Size screenSize;
   final String transitionStyle;
   final double transitionSpeedSeconds;
+  final double headingFontScale;
+  final double nameFontScale;
+  final double priceFontScale;
+  final bool showPrice;
+  final bool showProductImage;
 
   const ComboOfferShowcase({
     super.key,
@@ -22,6 +27,11 @@ class ComboOfferShowcase extends StatelessWidget {
     required this.screenSize,
     required this.transitionStyle,
     required this.transitionSpeedSeconds,
+    required this.headingFontScale,
+    required this.nameFontScale,
+    required this.priceFontScale,
+    required this.showPrice,
+    required this.showProductImage,
   });
 
   int get offersPerPage => offersPerPageFor(screenSize);
@@ -39,7 +49,7 @@ class ComboOfferShowcase extends StatelessWidget {
     final end = (start + perPage).clamp(0, combos.length);
     final pageCombos = combos.sublist(start, end);
     final availableHeight =
-        (screenSize.height - 72).clamp(360.0, screenSize.height);
+        (screenSize.height - 128).clamp(360.0, screenSize.height);
     final offerHeight = availableHeight / pageCombos.length;
 
     return AnimatedSwitcher(
@@ -76,6 +86,24 @@ class ComboOfferShowcase extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
+            Text(
+              'COMBO OFFER',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.playfairDisplay(
+                fontSize: ((screenSize.width * 0.034) * headingFontScale)
+                    .clamp(30.0, 68.0),
+                fontWeight: FontWeight.w800,
+                color: theme.primaryText,
+                letterSpacing: 1.2,
+                shadows: [
+                  Shadow(
+                    color: catTheme.primary.withValues(alpha: 0.28),
+                    blurRadius: 18,
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 14),
             for (var i = 0; i < pageCombos.length; i++)
               SizedBox(
                 height: offerHeight,
@@ -85,6 +113,10 @@ class ComboOfferShowcase extends StatelessWidget {
                   theme: theme,
                   screenWidth: screenSize.width,
                   offerHeight: offerHeight,
+                  nameFontScale: nameFontScale,
+                  priceFontScale: priceFontScale,
+                  showPrice: showPrice,
+                  showProductImage: showProductImage,
                 ),
               ),
           ],
@@ -100,6 +132,10 @@ class _ComboOfferFeature extends StatelessWidget {
   final TvMenuThemeData theme;
   final double screenWidth;
   final double offerHeight;
+  final double nameFontScale;
+  final double priceFontScale;
+  final bool showPrice;
+  final bool showProductImage;
 
   const _ComboOfferFeature({
     required this.combo,
@@ -107,6 +143,10 @@ class _ComboOfferFeature extends StatelessWidget {
     required this.theme,
     required this.screenWidth,
     required this.offerHeight,
+    required this.nameFontScale,
+    required this.priceFontScale,
+    required this.showPrice,
+    required this.showProductImage,
   });
 
   @override
@@ -115,8 +155,10 @@ class _ComboOfferFeature extends StatelessWidget {
     final discount = original > 0 && combo.price > 0
         ? (((original - combo.price) / original) * 100).clamp(0, 99).round()
         : 0;
-    final nameFontSize = (screenWidth * 0.050).clamp(48.0, 88.0);
-    final priceFontSize = (screenWidth * 0.054).clamp(56.0, 98.0);
+    final nameFontSize =
+        ((screenWidth * 0.050) * nameFontScale).clamp(42.0, 96.0);
+    final priceFontSize =
+        ((screenWidth * 0.054) * priceFontScale).clamp(48.0, 104.0);
 
     return Padding(
       padding: EdgeInsets.symmetric(
@@ -139,16 +181,17 @@ class _ComboOfferFeature extends StatelessWidget {
             ),
           ),
           SizedBox(height: offerHeight * 0.018),
-          Text(
-            'Rs. ${combo.price.toStringAsFixed(0)}',
-            textAlign: TextAlign.center,
-            style: GoogleFonts.playfairDisplay(
-              color: catTheme.accent,
-              fontSize: priceFontSize,
-              height: 0.92,
-              fontWeight: FontWeight.w900,
+          if (showPrice)
+            Text(
+              'Rs. ${combo.price.toStringAsFixed(0)}',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.playfairDisplay(
+                color: catTheme.accent,
+                fontSize: priceFontSize,
+                height: 0.92,
+                fontWeight: FontWeight.w900,
+              ),
             ),
-          ),
           SizedBox(height: offerHeight * 0.014),
           _OriginalPriceLine(
             original: original,
@@ -164,6 +207,7 @@ class _ComboOfferFeature extends StatelessWidget {
                 maxWidth: screenWidth * 0.80,
                 catTheme: catTheme,
                 theme: theme,
+                showProductImage: showProductImage,
               ),
             ),
           ),
@@ -178,12 +222,14 @@ class _ComboProductGrid extends StatelessWidget {
   final double maxWidth;
   final CategoryTheme catTheme;
   final TvMenuThemeData theme;
+  final bool showProductImage;
 
   const _ComboProductGrid({
     required this.items,
     required this.maxWidth,
     required this.catTheme,
     required this.theme,
+    required this.showProductImage,
   });
 
   @override
@@ -221,6 +267,7 @@ class _ComboProductGrid extends StatelessWidget {
                       imageSize: imageSize,
                       catTheme: catTheme,
                       theme: theme,
+                      showProductImage: showProductImage,
                     ),
                   ),
               ],
@@ -237,12 +284,14 @@ class _ComboProductTile extends StatelessWidget {
   final double imageSize;
   final CategoryTheme catTheme;
   final TvMenuThemeData theme;
+  final bool showProductImage;
 
   const _ComboProductTile({
     required this.item,
     required this.imageSize,
     required this.catTheme,
     required this.theme,
+    required this.showProductImage,
   });
 
   @override
@@ -270,7 +319,7 @@ class _ComboProductTile extends StatelessWidget {
             ],
           ),
           clipBehavior: Clip.antiAlias,
-          child: imageUrl == null
+          child: !showProductImage || imageUrl == null
               ? _ImageFallback(catTheme: catTheme, theme: theme)
               : Image.network(
                   imageUrl,

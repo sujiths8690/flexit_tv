@@ -131,6 +131,10 @@ class DisplayConfig {
   final bool showLogo;
   final bool showCompanyName;
   final bool showProductImage;
+  final double headingFontScale;
+  final double nameFontScale;
+  final double descriptionFontScale;
+  final double priceFontScale;
   final List<DisplayMediaItem> mediaItems;
   final List<MenuItem> menuItems;
 
@@ -152,6 +156,10 @@ class DisplayConfig {
     this.showLogo = true,
     this.showCompanyName = true,
     this.showProductImage = true,
+    this.headingFontScale = 1.0,
+    this.nameFontScale = 1.0,
+    this.descriptionFontScale = 1.0,
+    this.priceFontScale = 1.0,
     this.mediaItems = const [],
     this.menuItems = const [],
   });
@@ -184,6 +192,11 @@ class DisplayConfig {
       showLogo: json['showLogo'] as bool? ?? true,
       showCompanyName: json['showCompanyName'] as bool? ?? true,
       showProductImage: json['showProductImage'] as bool? ?? true,
+      headingFontScale: (json['headingFontScale'] as num?)?.toDouble() ?? 1.0,
+      nameFontScale: (json['nameFontScale'] as num?)?.toDouble() ?? 1.0,
+      descriptionFontScale:
+          (json['descriptionFontScale'] as num?)?.toDouble() ?? 1.0,
+      priceFontScale: (json['priceFontScale'] as num?)?.toDouble() ?? 1.0,
       mediaItems: (json['mediaItems'] as List? ?? [])
           .whereType<Map<String, dynamic>>()
           .map(DisplayMediaItem.fromJson)
@@ -210,6 +223,10 @@ class DisplayConfig {
         'showLogo': showLogo,
         'showCompanyName': showCompanyName,
         'showProductImage': showProductImage,
+        'headingFontScale': headingFontScale,
+        'nameFontScale': nameFontScale,
+        'descriptionFontScale': descriptionFontScale,
+        'priceFontScale': priceFontScale,
         'mediaItems': mediaItems.map((item) => item.toJson()).toList(),
         'menuItems': menuItems.map((item) => item.toJson()).toList(),
       };

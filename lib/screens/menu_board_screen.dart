@@ -42,6 +42,24 @@ class _MenuBoardScreenState extends State<MenuBoardScreen>
 
   MenuCategory get _category =>
       widget.displayConfig.menuCategory ?? MenuCategory.all;
+  String get _sectionHeading {
+    switch (widget.displayConfig.contentMode) {
+      case 'comboOffers':
+        return 'Combo Offer';
+      case 'todaysStar':
+        return "Today's Star";
+      case 'category':
+        return _items.isNotEmpty
+            ? (_items.first.categoryName ?? 'Menu')
+            : 'Menu';
+      case 'allCategories':
+        return _items.isNotEmpty
+            ? (_items.first.categoryName ?? 'Full Menu')
+            : 'Full Menu';
+      default:
+        return 'Menu';
+    }
+  }
 
   MenuThemeType get _themeType {
     if (widget.config.menuTheme != null) return widget.config.menuTheme!;
@@ -88,7 +106,15 @@ class _MenuBoardScreenState extends State<MenuBoardScreen>
         oldWidget.displayConfig.showDescription !=
             widget.displayConfig.showDescription ||
         oldWidget.displayConfig.showProductImage !=
-            widget.displayConfig.showProductImage) {
+            widget.displayConfig.showProductImage ||
+        oldWidget.displayConfig.headingFontScale !=
+            widget.displayConfig.headingFontScale ||
+        oldWidget.displayConfig.nameFontScale !=
+            widget.displayConfig.nameFontScale ||
+        oldWidget.displayConfig.descriptionFontScale !=
+            widget.displayConfig.descriptionFontScale ||
+        oldWidget.displayConfig.priceFontScale !=
+            widget.displayConfig.priceFontScale) {
       _contentSignature =
           _buildContentSignature(widget.displayConfig.menuItems);
       _fadeCtrl.reset();
@@ -138,13 +164,10 @@ class _MenuBoardScreenState extends State<MenuBoardScreen>
   }
 
   int _itemsPerPage(Size size) {
-    const verticalPadding = 56.0;
-    const dividerHeight = 1.0;
-    final baseRowHeight = (size.width * 0.12).clamp(170.0, 220.0);
-    final availableHeight =
-        (size.height - verticalPadding).clamp(180.0, size.height);
-    final count = (availableHeight / (baseRowHeight + dividerHeight)).floor();
-    return count.clamp(1, 6);
+    return _MenuPageMetrics.forSize(
+      size,
+      headingFontScale: widget.displayConfig.headingFontScale,
+    ).itemsPerPage;
   }
 
   void _startPageTimer() {
@@ -232,6 +255,13 @@ class _MenuBoardScreenState extends State<MenuBoardScreen>
                           transitionStyle: widget.displayConfig.transitionStyle,
                           transitionSpeedSeconds:
                               widget.displayConfig.transitionSpeedSeconds,
+                          headingFontScale:
+                              widget.displayConfig.headingFontScale,
+                          nameFontScale: widget.displayConfig.nameFontScale,
+                          priceFontScale: widget.displayConfig.priceFontScale,
+                          showPrice: widget.displayConfig.showPrice,
+                          showProductImage:
+                              widget.displayConfig.showProductImage,
                         )
                       : widget.displayConfig.contentMode == 'todaysStar'
                           ? _TodaysStarShowcase(
@@ -245,6 +275,11 @@ class _MenuBoardScreenState extends State<MenuBoardScreen>
                               showPrice: widget.displayConfig.showPrice,
                               showProductImage:
                                   widget.displayConfig.showProductImage,
+                              headingFontScale:
+                                  widget.displayConfig.headingFontScale,
+                              nameFontScale: widget.displayConfig.nameFontScale,
+                              priceFontScale:
+                                  widget.displayConfig.priceFontScale,
                             )
                           : _PagedMenu(
                               items: _items,
@@ -262,6 +297,14 @@ class _MenuBoardScreenState extends State<MenuBoardScreen>
                                   widget.displayConfig.showDescription,
                               showProductImage:
                                   widget.displayConfig.showProductImage,
+                              heading: _sectionHeading,
+                              headingFontScale:
+                                  widget.displayConfig.headingFontScale,
+                              nameFontScale: widget.displayConfig.nameFontScale,
+                              descriptionFontScale:
+                                  widget.displayConfig.descriptionFontScale,
+                              priceFontScale:
+                                  widget.displayConfig.priceFontScale,
                             ),
             ),
             if (_shouldShowBrandMark)
@@ -297,6 +340,9 @@ class _TodaysStarShowcase extends StatelessWidget {
   final double transitionSpeedSeconds;
   final bool showPrice;
   final bool showProductImage;
+  final double headingFontScale;
+  final double nameFontScale;
+  final double priceFontScale;
 
   const _TodaysStarShowcase({
     required this.items,
@@ -306,6 +352,9 @@ class _TodaysStarShowcase extends StatelessWidget {
     required this.transitionSpeedSeconds,
     required this.showPrice,
     required this.showProductImage,
+    required this.headingFontScale,
+    required this.nameFontScale,
+    required this.priceFontScale,
   });
 
   int get _itemsPerPage => 1;
@@ -322,9 +371,10 @@ class _TodaysStarShowcase extends StatelessWidget {
       8,
       (value, item) => max(value, item.name.length),
     );
-    final nameSize =
-        (screenSize.width * 0.054).clamp(42.0, longestName > 20 ? 70.0 : 88.0);
-    final priceSize = (screenSize.width * 0.034).clamp(30.0, 54.0);
+    final nameSize = ((screenSize.width * 0.054) * nameFontScale)
+        .clamp(36.0, longestName > 20 ? 78.0 : 96.0);
+    final priceSize =
+        ((screenSize.width * 0.034) * priceFontScale).clamp(26.0, 60.0);
 
     return AnimatedSwitcher(
       duration: Duration(milliseconds: (transitionSpeedSeconds * 1000).round()),
@@ -372,7 +422,8 @@ class _TodaysStarShowcase extends StatelessWidget {
                     "TODAY'S STAR",
                     textAlign: TextAlign.center,
                     style: GoogleFonts.bangers(
-                      fontSize: (screenSize.width * 0.044).clamp(36.0, 72.0),
+                      fontSize: ((screenSize.width * 0.044) * headingFontScale)
+                          .clamp(32.0, 80.0),
                       color: const Color(0xFFFFD21F),
                       letterSpacing: 1.2,
                       shadows: const [
@@ -815,6 +866,11 @@ class _PagedMenu extends StatelessWidget {
   final bool showPrice;
   final bool showDescription;
   final bool showProductImage;
+  final String heading;
+  final double headingFontScale;
+  final double nameFontScale;
+  final double descriptionFontScale;
+  final double priceFontScale;
 
   const _PagedMenu({
     required this.items,
@@ -828,99 +884,213 @@ class _PagedMenu extends StatelessWidget {
     required this.showPrice,
     required this.showDescription,
     required this.showProductImage,
+    required this.heading,
+    required this.headingFontScale,
+    required this.nameFontScale,
+    required this.descriptionFontScale,
+    required this.priceFontScale,
   });
 
-  static const double _verticalPadding = 56;
-
-  int get _itemsPerPage {
-    const dividerHeight = 1.0;
-    final baseRowHeight = (screenSize.width * 0.12).clamp(170.0, 220.0);
-    final availableHeight =
-        (screenSize.height - _verticalPadding).clamp(180.0, screenSize.height);
-    final count = (availableHeight / (baseRowHeight + dividerHeight)).floor();
-    return count.clamp(1, 6);
-  }
+  static const double _verticalPadding = 76;
+  static const double _headingGap = 14;
 
   double get _baseRowHeight => (screenSize.width * 0.12).clamp(170.0, 220.0);
 
   @override
   Widget build(BuildContext context) {
-    final itemsPerPage = _itemsPerPage;
-    final pageCount =
-        (items.length / itemsPerPage).ceil().clamp(1, items.length);
-    final safePageIndex = pageIndex % pageCount;
-    final start = safePageIndex * itemsPerPage;
-    final end = (start + itemsPerPage).clamp(0, items.length);
-    final pageItems = items.sublist(start, end);
-    final dividerCount = pageItems.length > 1 ? pageItems.length - 1 : 0;
-    final availableHeight =
-        (screenSize.height - _verticalPadding).clamp(180.0, screenSize.height);
-    final stretchedRowHeight =
-        (availableHeight - dividerCount) / pageItems.length;
-    final sparseRowHeight =
-        (screenSize.height * 0.34).clamp(_baseRowHeight, 380.0);
-    final rowHeight = pageItems.length <= 2
-        ? min(stretchedRowHeight, sparseRowHeight)
-        : stretchedRowHeight;
-    final rows = <Widget>[];
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final viewportSize = Size(
+          constraints.maxWidth.isFinite
+              ? constraints.maxWidth
+              : screenSize.width,
+          constraints.maxHeight.isFinite
+              ? constraints.maxHeight
+              : screenSize.height,
+        );
+        final metrics = _MenuPageMetrics.forSize(
+          viewportSize,
+          headingFontScale: headingFontScale,
+        );
+        final itemsPerPage = metrics.itemsPerPage;
+        final pageCount =
+            (items.length / itemsPerPage).ceil().clamp(1, items.length);
+        final safePageIndex = pageIndex % pageCount;
+        final start = safePageIndex * itemsPerPage;
+        final end = (start + itemsPerPage).clamp(0, items.length);
+        final pageItems = items.sublist(start, end);
+        final dividerCount = pageItems.length > 1 ? pageItems.length - 1 : 0;
+        final stretchedRowHeight =
+            (metrics.availableRowsHeight - dividerCount) / pageItems.length;
+        final sparseRowHeight =
+            (viewportSize.height * 0.34).clamp(_baseRowHeight, 380.0);
+        final rowHeight = pageItems.length <= 2
+            ? min(stretchedRowHeight, sparseRowHeight)
+            : stretchedRowHeight;
+        final rows = <Widget>[];
 
-    for (var i = 0; i < pageItems.length; i++) {
-      final itemIndex = start + i;
-      rows.add(
-        MenuItemRow(
-          item: pageItems[i],
-          catTheme: catTheme,
-          theme: theme,
-          imageOnLeft: itemIndex.isEven,
-          animationDelay: Duration(milliseconds: i * 100),
-          screenWidth: screenSize.width,
-          rowHeight: rowHeight,
-          showPrice: showPrice,
-          showDescription: showDescription,
-          showProductImage: showProductImage,
-        ),
-      );
+        for (var i = 0; i < pageItems.length; i++) {
+          final itemIndex = start + i;
+          rows.add(
+            MenuItemRow(
+              item: pageItems[i],
+              catTheme: catTheme,
+              theme: theme,
+              imageOnLeft: itemIndex.isEven,
+              animationDelay: Duration(milliseconds: i * 100),
+              screenWidth: viewportSize.width,
+              rowHeight: rowHeight,
+              showPrice: showPrice,
+              showDescription: showDescription,
+              showProductImage: showProductImage,
+              nameFontScale: nameFontScale,
+              descriptionFontScale: descriptionFontScale,
+              priceFontScale: priceFontScale,
+            ),
+          );
 
-      if (i < pageItems.length - 1) {
-        rows.add(_RowDivider(theme: theme));
-      }
-    }
-
-    return AnimatedSwitcher(
-      duration: Duration(milliseconds: (transitionSpeedSeconds * 1000).round()),
-      switchInCurve: Curves.easeOut,
-      switchOutCurve: Curves.easeIn,
-      transitionBuilder: (child, animation) {
-        switch (transitionStyle.toLowerCase()) {
-          case 'slide':
-            return SlideTransition(
-              position: Tween<Offset>(
-                begin: const Offset(0.04, 0),
-                end: Offset.zero,
-              ).animate(animation),
-              child: FadeTransition(opacity: animation, child: child),
-            );
-          case 'zoom':
-            return ScaleTransition(
-              scale: Tween<double>(begin: 0.98, end: 1).animate(animation),
-              child: FadeTransition(opacity: animation, child: child),
-            );
-          case 'flip':
-            return RotationTransition(
-              turns: Tween<double>(begin: -0.01, end: 0).animate(animation),
-              child: FadeTransition(opacity: animation, child: child),
-            );
-          case 'fade':
-          default:
-            return FadeTransition(opacity: animation, child: child);
+          if (i < pageItems.length - 1) {
+            rows.add(_RowDivider(theme: theme));
+          }
         }
+
+        return AnimatedSwitcher(
+          duration:
+              Duration(milliseconds: (transitionSpeedSeconds * 1000).round()),
+          switchInCurve: Curves.easeOut,
+          switchOutCurve: Curves.easeIn,
+          transitionBuilder: (child, animation) {
+            switch (transitionStyle.toLowerCase()) {
+              case 'slide':
+                return SlideTransition(
+                  position: Tween<Offset>(
+                    begin: const Offset(0.04, 0),
+                    end: Offset.zero,
+                  ).animate(animation),
+                  child: FadeTransition(opacity: animation, child: child),
+                );
+              case 'zoom':
+                return ScaleTransition(
+                  scale: Tween<double>(begin: 0.98, end: 1).animate(animation),
+                  child: FadeTransition(opacity: animation, child: child),
+                );
+              case 'flip':
+                return RotationTransition(
+                  turns: Tween<double>(begin: -0.01, end: 0).animate(animation),
+                  child: FadeTransition(opacity: animation, child: child),
+                );
+              case 'fade':
+              default:
+                return FadeTransition(opacity: animation, child: child);
+            }
+          },
+          child: Padding(
+            key: ValueKey('$groupIndex-$safePageIndex'),
+            padding: const EdgeInsets.symmetric(vertical: _verticalPadding / 2),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                _StandardSectionHeading(
+                  text: heading,
+                  theme: theme,
+                  catTheme: catTheme,
+                  fontScale: headingFontScale,
+                  screenWidth: viewportSize.width,
+                  height: metrics.headingHeight,
+                ),
+                const SizedBox(height: _headingGap),
+                ...rows,
+              ],
+            ),
+          ),
+        );
       },
-      child: Padding(
-        key: ValueKey('$groupIndex-$safePageIndex'),
-        padding: const EdgeInsets.symmetric(vertical: _verticalPadding / 2),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: rows,
+    );
+  }
+}
+
+class _MenuPageMetrics {
+  final double availableRowsHeight;
+  final double headingHeight;
+  final int itemsPerPage;
+
+  const _MenuPageMetrics({
+    required this.availableRowsHeight,
+    required this.headingHeight,
+    required this.itemsPerPage,
+  });
+
+  factory _MenuPageMetrics.forSize(
+    Size size, {
+    required double headingFontScale,
+  }) {
+    const dividerHeight = 1.0;
+    final baseRowHeight = (size.width * 0.12).clamp(170.0, 220.0);
+    final headingFontSize =
+        ((size.width * 0.034) * headingFontScale).clamp(30.0, 68.0);
+    final headingHeight = headingFontSize * 1.25;
+    final headingBlockHeight = headingHeight + _PagedMenu._headingGap;
+    final availableRowsHeight =
+        (size.height - _PagedMenu._verticalPadding - headingBlockHeight)
+            .clamp(baseRowHeight, size.height);
+    final count = ((availableRowsHeight + dividerHeight) /
+            (baseRowHeight + dividerHeight))
+        .floor();
+
+    return _MenuPageMetrics(
+      availableRowsHeight: availableRowsHeight,
+      headingHeight: headingHeight,
+      itemsPerPage: count.clamp(1, 6),
+    );
+  }
+}
+
+class _StandardSectionHeading extends StatelessWidget {
+  final String text;
+  final TvMenuThemeData theme;
+  final CategoryTheme catTheme;
+  final double fontScale;
+  final double screenWidth;
+  final double height;
+
+  const _StandardSectionHeading({
+    required this.text,
+    required this.theme,
+    required this.catTheme,
+    required this.fontScale,
+    required this.screenWidth,
+    required this.height,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: height,
+      width: double.infinity,
+      child: ClipRect(
+        child: Center(
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            child: Text(
+              text.toUpperCase(),
+              textAlign: TextAlign.center,
+              style: GoogleFonts.playfairDisplay(
+                fontSize: ((screenWidth * 0.034) * fontScale).clamp(30.0, 68.0),
+                fontWeight: FontWeight.w800,
+                color: theme.primaryText,
+                height: 1,
+                letterSpacing: 1.2,
+                shadows: [
+                  Shadow(
+                    color: catTheme.primary.withValues(alpha: 0.28),
+                    blurRadius: 18,
+                  ),
+                ],
+              ),
+              maxLines: 1,
+              overflow: TextOverflow.visible,
+            ),
+          ),
         ),
       ),
     );
