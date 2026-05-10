@@ -141,7 +141,7 @@ class _RowContent extends StatelessWidget {
           )
         : const SizedBox.shrink();
 
-    return SizedBox(
+    final row = SizedBox(
       height: rowHeight,
       child: Padding(
         padding: EdgeInsets.symmetric(horizontal: hPad),
@@ -157,6 +157,55 @@ class _RowContent extends StatelessWidget {
                   if (showProductImage) imageBlock,
                 ],
         ),
+      ),
+    );
+
+    return _UnavailableTreatment(
+      enabled: !item.isAvailable,
+      child: row,
+    );
+  }
+}
+
+class _UnavailableTreatment extends StatelessWidget {
+  final bool enabled;
+  final Widget child;
+
+  const _UnavailableTreatment({
+    required this.enabled,
+    required this.child,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (!enabled) return child;
+
+    return Opacity(
+      opacity: 0.46,
+      child: ColorFiltered(
+        colorFilter: const ColorFilter.matrix(<double>[
+          0.2126,
+          0.7152,
+          0.0722,
+          0,
+          0,
+          0.2126,
+          0.7152,
+          0.0722,
+          0,
+          0,
+          0.2126,
+          0.7152,
+          0.0722,
+          0,
+          0,
+          0,
+          0,
+          0,
+          1,
+          0,
+        ]),
+        child: child,
       ),
     );
   }

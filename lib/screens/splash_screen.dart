@@ -1,4 +1,6 @@
 // lib/screens/splash_screen.dart
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../services/device_service.dart';
@@ -19,6 +21,7 @@ class _SplashScreenState extends State<SplashScreen>
   late Animation<double> _logoOpacity;
   late Animation<double> _taglineOpacity;
   final DeviceService _deviceService = DeviceService();
+  Timer? _navigationTimer;
 
   @override
   void initState() {
@@ -44,9 +47,15 @@ class _SplashScreenState extends State<SplashScreen>
     _boot();
   }
 
-  Future<void> _boot() async {
-    await _deviceService.initialize();
-    await Future.delayed(const Duration(milliseconds: 2200));
+  void _boot() {
+    _deviceService.initialize().catchError((_) {
+      _deviceService.useOfflineStartupFallback();
+    });
+
+    _navigationTimer = Timer(const Duration(milliseconds: 1400), _showRoot);
+  }
+
+  void _showRoot() {
     if (!mounted) return;
     Navigator.of(context).pushReplacement(
       PageRouteBuilder(
@@ -60,6 +69,7 @@ class _SplashScreenState extends State<SplashScreen>
 
   @override
   void dispose() {
+    _navigationTimer?.cancel();
     _ctrl.dispose();
     super.dispose();
   }
@@ -117,7 +127,8 @@ class _SplashScreenState extends State<SplashScreen>
                         child: Text(
                           'M',
                           style: TextStyle(
-                            fontFamily: GoogleFonts.playfairDisplay().fontFamily,
+                            fontFamily:
+                                GoogleFonts.playfairDisplay().fontFamily,
                             fontSize: 52,
                             fontWeight: FontWeight.w700,
                             color: AppTheme.background,

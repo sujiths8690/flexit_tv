@@ -60,7 +60,13 @@ class _RootScreenState extends State<RootScreen> {
 
     // ── Not paired → show QR ─────────────────────────────────────────────
     if (config == null || !config.isPaired) {
-      return QrPairingScreen(deviceCode: service.deviceCode);
+      return QrPairingScreen(
+        deviceCode: service.deviceCode,
+        realtimeStatus: service.realtimeStatus,
+        configStatus: service.configStatus,
+        backendEndpoint: service.backendEndpoint,
+        realtimeEndpoint: service.realtimeEndpoint,
+      );
     }
 
     final display = config.displayConfig;

@@ -431,5 +431,5 @@ String? _absoluteImageUrl(String? url) {
   if (value == null || value.isEmpty) return null;
   if (value.startsWith('http')) return value;
   final path = value.startsWith('/') ? value.substring(1) : value;
-  return 'http://192.168.29.184:3002/$path';
+  return 'http://192.168.29.184:4002/$path';
 }

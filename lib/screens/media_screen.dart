@@ -181,7 +181,7 @@ class _MediaScreenState extends State<MediaScreen> {
   String _absoluteUrl(String url) {
     if (url.startsWith('http')) return url;
     final path = url.startsWith('/') ? url.substring(1) : url;
-    return 'http://192.168.29.184:3002/$path';
+    return 'http://192.168.29.184:4002/$path';
   }
 }
 

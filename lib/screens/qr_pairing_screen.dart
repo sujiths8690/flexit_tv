@@ -15,7 +15,18 @@ import '../widgets/character_video_widget.dart';
 
 class QrPairingScreen extends StatefulWidget {
   final String deviceCode;
-  const QrPairingScreen({super.key, required this.deviceCode});
+  final String realtimeStatus;
+  final String configStatus;
+  final String backendEndpoint;
+  final String realtimeEndpoint;
+  const QrPairingScreen({
+    super.key,
+    required this.deviceCode,
+    required this.realtimeStatus,
+    required this.configStatus,
+    required this.backendEndpoint,
+    required this.realtimeEndpoint,
+  });
 
   @override
   State<QrPairingScreen> createState() => _QrPairingScreenState();
@@ -218,6 +229,14 @@ class _QrPairingScreenState extends State<QrPairingScreen>
                 const SizedBox(height: 40),
                 // Device code pill
                 _DeviceCodeBadge(code: widget.deviceCode),
+                const SizedBox(height: 12),
+                _RealtimeStatusBadge(status: widget.realtimeStatus),
+                const SizedBox(height: 10),
+                _ConnectionDetails(
+                  configStatus: widget.configStatus,
+                  backendEndpoint: widget.backendEndpoint,
+                  realtimeEndpoint: widget.realtimeEndpoint,
+                ),
               ],
             ),
           ),
@@ -272,6 +291,14 @@ class _QrPairingScreenState extends State<QrPairingScreen>
         ),
         const SizedBox(height: 32),
         _DeviceCodeBadge(code: widget.deviceCode),
+        const SizedBox(height: 12),
+        _RealtimeStatusBadge(status: widget.realtimeStatus),
+        const SizedBox(height: 10),
+        _ConnectionDetails(
+          configStatus: widget.configStatus,
+          backendEndpoint: widget.backendEndpoint,
+          realtimeEndpoint: widget.realtimeEndpoint,
+        ),
         const SizedBox(height: 24),
         SlideTransition(
           position: _slideAnim,
@@ -299,6 +326,63 @@ class _QrPairingScreenState extends State<QrPairingScreen>
       'app': 'menuboard',
       'version': 1,
     });
+  }
+}
+
+class _ConnectionDetails extends StatelessWidget {
+  final String configStatus;
+  final String backendEndpoint;
+  final String realtimeEndpoint;
+  const _ConnectionDetails({
+    required this.configStatus,
+    required this.backendEndpoint,
+    required this.realtimeEndpoint,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      '$configStatus\nHTTP $backendEndpoint\nWS $realtimeEndpoint',
+      textAlign: TextAlign.center,
+      style: TextStyle(
+        fontFamily: GoogleFonts.nunito().fontFamily,
+        color: AppTheme.whiteDim,
+        fontSize: 10,
+        fontWeight: FontWeight.w600,
+        height: 1.35,
+      ),
+    );
+  }
+}
+
+class _RealtimeStatusBadge extends StatelessWidget {
+  final String status;
+  const _RealtimeStatusBadge({required this.status});
+
+  @override
+  Widget build(BuildContext context) {
+    final connected = status.startsWith('connected');
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 7),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(10),
+        color: connected
+            ? const Color(0xFF2ECC71).withOpacity(0.12)
+            : AppTheme.gold.withOpacity(0.08),
+        border: Border.all(
+          color: connected ? const Color(0xFF2ECC71) : AppTheme.goldDim,
+        ),
+      ),
+      child: Text(
+        'Realtime: $status',
+        style: TextStyle(
+          fontFamily: GoogleFonts.nunito().fontFamily,
+          color: connected ? const Color(0xFF7DFFA8) : AppTheme.whiteDim,
+          fontSize: 12,
+          fontWeight: FontWeight.w700,
+        ),
+      ),
+    );
   }
 }
 

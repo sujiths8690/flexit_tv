@@ -106,7 +106,7 @@ class _MenuBoardScreenState extends State<MenuBoardScreen>
     return items
         .map(
           (item) =>
-              '${item.id}:${item.name}:${item.price}:${item.originalPrice ?? ''}:${item.priceVariants.map((variant) => '${variant.label}-${variant.price}').join(',')}:${item.imageUrl ?? ''}:${item.categoryId ?? ''}:${item.comboItems.map((comboItem) => '${comboItem.product.id}-${comboItem.product.name}-${comboItem.product.price}-${comboItem.quantity}-${comboItem.product.imageUrl ?? ''}').join(',')}',
+              '${item.id}:${item.name}:${item.price}:${item.originalPrice ?? ''}:${item.isAvailable}:${item.priceVariants.map((variant) => '${variant.label}-${variant.price}').join(',')}:${item.imageUrl ?? ''}:${item.categoryId ?? ''}:${item.comboItems.map((comboItem) => '${comboItem.product.id}-${comboItem.product.name}-${comboItem.product.price}-${comboItem.product.isAvailable}-${comboItem.quantity}-${comboItem.product.imageUrl ?? ''}').join(',')}',
         )
         .join('|');
   }
@@ -159,6 +159,11 @@ class _MenuBoardScreenState extends State<MenuBoardScreen>
         final pageCount = (_items.length / offersPerPage).ceil();
         if (pageCount <= 1) return;
         setState(() => _pageIndex = (_pageIndex + 1) % pageCount);
+        return;
+      }
+      if (widget.displayConfig.contentMode == 'todaysStar') {
+        if (_items.length <= 1) return;
+        setState(() => _pageIndex = (_pageIndex + 1) % _items.length);
         return;
       }
       final itemsPerPage = _itemsPerPage(widget.screenSize);
@@ -224,25 +229,40 @@ class _MenuBoardScreenState extends State<MenuBoardScreen>
                           catTheme: catTheme,
                           theme: theme,
                           screenSize: widget.screenSize,
-                          transitionStyle:
-                              widget.displayConfig.transitionStyle,
+                          transitionStyle: widget.displayConfig.transitionStyle,
                           transitionSpeedSeconds:
                               widget.displayConfig.transitionSpeedSeconds,
                         )
-                  : _PagedMenu(
-                      items: _items,
-                      pageIndex: _pageIndex,
-                      groupIndex: _groupIndex,
-                      catTheme: catTheme,
-                      theme: theme,
-                      screenSize: widget.screenSize,
-                      transitionStyle: widget.displayConfig.transitionStyle,
-                      transitionSpeedSeconds:
-                          widget.displayConfig.transitionSpeedSeconds,
-                      showPrice: widget.displayConfig.showPrice,
-                      showDescription: widget.displayConfig.showDescription,
-                      showProductImage: widget.displayConfig.showProductImage,
-                    ),
+                      : widget.displayConfig.contentMode == 'todaysStar'
+                          ? _TodaysStarShowcase(
+                              items: _items,
+                              pageIndex: _pageIndex,
+                              screenSize: widget.screenSize,
+                              transitionStyle:
+                                  widget.displayConfig.transitionStyle,
+                              transitionSpeedSeconds:
+                                  widget.displayConfig.transitionSpeedSeconds,
+                              showPrice: widget.displayConfig.showPrice,
+                              showProductImage:
+                                  widget.displayConfig.showProductImage,
+                            )
+                          : _PagedMenu(
+                              items: _items,
+                              pageIndex: _pageIndex,
+                              groupIndex: _groupIndex,
+                              catTheme: catTheme,
+                              theme: theme,
+                              screenSize: widget.screenSize,
+                              transitionStyle:
+                                  widget.displayConfig.transitionStyle,
+                              transitionSpeedSeconds:
+                                  widget.displayConfig.transitionSpeedSeconds,
+                              showPrice: widget.displayConfig.showPrice,
+                              showDescription:
+                                  widget.displayConfig.showDescription,
+                              showProductImage:
+                                  widget.displayConfig.showProductImage,
+                            ),
             ),
             if (_shouldShowBrandMark)
               BusinessBrandMark(
@@ -267,6 +287,520 @@ class _MenuBoardScreenState extends State<MenuBoardScreen>
         (widget.config.businessLogoUrl?.trim().isNotEmpty ?? false);
     return hasVisibleName || hasVisibleLogo;
   }
+}
+
+class _TodaysStarShowcase extends StatelessWidget {
+  final List<MenuItem> items;
+  final int pageIndex;
+  final Size screenSize;
+  final String transitionStyle;
+  final double transitionSpeedSeconds;
+  final bool showPrice;
+  final bool showProductImage;
+
+  const _TodaysStarShowcase({
+    required this.items,
+    required this.pageIndex,
+    required this.screenSize,
+    required this.transitionStyle,
+    required this.transitionSpeedSeconds,
+    required this.showPrice,
+    required this.showProductImage,
+  });
+
+  int get _itemsPerPage => 1;
+
+  @override
+  Widget build(BuildContext context) {
+    final pageCount =
+        (items.length / _itemsPerPage).ceil().clamp(1, items.length);
+    final safePageIndex = pageIndex % pageCount;
+    final start = safePageIndex * _itemsPerPage;
+    final end = (start + _itemsPerPage).clamp(0, items.length);
+    final pageItems = items.sublist(start, end);
+    final longestName = pageItems.fold<int>(
+      8,
+      (value, item) => max(value, item.name.length),
+    );
+    final nameSize =
+        (screenSize.width * 0.054).clamp(42.0, longestName > 20 ? 70.0 : 88.0);
+    final priceSize = (screenSize.width * 0.034).clamp(30.0, 54.0);
+
+    return AnimatedSwitcher(
+      duration: Duration(milliseconds: (transitionSpeedSeconds * 1000).round()),
+      switchInCurve: Curves.easeOut,
+      switchOutCurve: Curves.easeIn,
+      transitionBuilder: (child, animation) {
+        switch (transitionStyle.toLowerCase()) {
+          case 'slide':
+            return SlideTransition(
+              position: Tween<Offset>(
+                begin: const Offset(0.04, 0),
+                end: Offset.zero,
+              ).animate(animation),
+              child: FadeTransition(opacity: animation, child: child),
+            );
+          case 'zoom':
+            return ScaleTransition(
+              scale: Tween<double>(begin: 0.97, end: 1).animate(animation),
+              child: FadeTransition(opacity: animation, child: child),
+            );
+          case 'flip':
+            return RotationTransition(
+              turns: Tween<double>(begin: -0.01, end: 0).animate(animation),
+              child: FadeTransition(opacity: animation, child: child),
+            );
+          case 'fade':
+          default:
+            return FadeTransition(opacity: animation, child: child);
+        }
+      },
+      child: Stack(
+        key: ValueKey('todays-star-$safePageIndex-${items.length}'),
+        fit: StackFit.expand,
+        children: [
+          const Positioned.fill(child: _ComicStarBackground()),
+          SafeArea(
+            child: Padding(
+              padding: EdgeInsets.symmetric(
+                horizontal: (screenSize.width * 0.06).clamp(34.0, 92.0),
+                vertical: (screenSize.height * 0.06).clamp(28.0, 58.0),
+              ),
+              child: Column(
+                children: [
+                  Text(
+                    "TODAY'S STAR",
+                    textAlign: TextAlign.center,
+                    style: GoogleFonts.bangers(
+                      fontSize: (screenSize.width * 0.044).clamp(36.0, 72.0),
+                      color: const Color(0xFFFFD21F),
+                      letterSpacing: 1.2,
+                      shadows: const [
+                        Shadow(
+                          color: Color(0xFFE51F2D),
+                          offset: Offset(3, 0),
+                        ),
+                        Shadow(
+                          color: Color(0xFFE51F2D),
+                          offset: Offset(-3, 0),
+                        ),
+                        Shadow(
+                          color: Color(0xFFE51F2D),
+                          offset: Offset(0, 3),
+                        ),
+                        Shadow(
+                          color: Color(0xFFE51F2D),
+                          offset: Offset(0, -3),
+                        ),
+                        Shadow(
+                          color: Color(0x33000000),
+                          offset: Offset(6, 6),
+                          blurRadius: 2,
+                        ),
+                      ],
+                    ),
+                  ),
+                  SizedBox(
+                      height: (screenSize.height * 0.035).clamp(18.0, 36.0)),
+                  Expanded(
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: pageItems
+                          .map(
+                            (item) => Expanded(
+                              child: _TodaysStarProduct(
+                                item: item,
+                                nameSize: nameSize,
+                                priceSize: priceSize,
+                                showPrice: showPrice,
+                                showProductImage: showProductImage,
+                                maxImageSize: (screenSize.height * 0.38)
+                                    .clamp(220.0, 430.0),
+                              ),
+                            ),
+                          )
+                          .toList(),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _TodaysStarProduct extends StatelessWidget {
+  final MenuItem item;
+  final double nameSize;
+  final double priceSize;
+  final bool showPrice;
+  final bool showProductImage;
+  final double maxImageSize;
+
+  const _TodaysStarProduct({
+    required this.item,
+    required this.nameSize,
+    required this.priceSize,
+    required this.showPrice,
+    required this.showProductImage,
+    required this.maxImageSize,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final medallionSize = min(
+          maxImageSize,
+          min(constraints.maxWidth * 0.72, constraints.maxHeight * 0.56),
+        );
+        final product = FittedBox(
+          fit: BoxFit.scaleDown,
+          child: SizedBox(
+            width: constraints.maxWidth,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (showProductImage) ...[
+                  _RedDottedProductCircle(
+                    item: item,
+                    size: medallionSize,
+                  ),
+                  SizedBox(height: medallionSize * 0.08),
+                ],
+                Text(
+                  item.name,
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.bangers(
+                    fontSize: nameSize,
+                    color: const Color(0xFFFFF04A),
+                    letterSpacing: 0.8,
+                    height: 1,
+                    shadows: const [
+                      Shadow(
+                        color: Color(0xFFE51F2D),
+                        offset: Offset(3, 0),
+                      ),
+                      Shadow(
+                        color: Color(0xFFE51F2D),
+                        offset: Offset(-3, 0),
+                      ),
+                      Shadow(
+                        color: Color(0xFFE51F2D),
+                        offset: Offset(0, 3),
+                      ),
+                      Shadow(
+                        color: Color(0xFFE51F2D),
+                        offset: Offset(0, -3),
+                      ),
+                      Shadow(
+                        color: Color(0x55000000),
+                        offset: Offset(5, 5),
+                        blurRadius: 1,
+                      ),
+                    ],
+                  ),
+                  maxLines: 2,
+                  overflow: TextOverflow.ellipsis,
+                ),
+                if (showPrice) ...[
+                  const SizedBox(height: 12),
+                  _TodaysStarPriceText(item: item, fontSize: priceSize),
+                ],
+              ],
+            ),
+          ),
+        );
+
+        return _UnavailableTreatment(
+          enabled: !item.isAvailable,
+          child: product,
+        );
+      },
+    );
+  }
+}
+
+class _UnavailableTreatment extends StatelessWidget {
+  final bool enabled;
+  final Widget child;
+
+  const _UnavailableTreatment({
+    required this.enabled,
+    required this.child,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (!enabled) return child;
+
+    return Opacity(
+      opacity: 0.46,
+      child: ColorFiltered(
+        colorFilter: const ColorFilter.matrix(<double>[
+          0.2126,
+          0.7152,
+          0.0722,
+          0,
+          0,
+          0.2126,
+          0.7152,
+          0.0722,
+          0,
+          0,
+          0.2126,
+          0.7152,
+          0.0722,
+          0,
+          0,
+          0,
+          0,
+          0,
+          1,
+          0,
+        ]),
+        child: child,
+      ),
+    );
+  }
+}
+
+class _RedDottedProductCircle extends StatelessWidget {
+  final MenuItem item;
+  final double size;
+
+  const _RedDottedProductCircle({
+    required this.item,
+    required this.size,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final imageSize = size * 0.72;
+    return SizedBox(
+      width: size,
+      height: size,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          CustomPaint(
+            size: Size.square(size),
+            painter: const _DottedCirclePainter(),
+          ),
+          Container(
+            width: imageSize,
+            height: imageSize,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: const Color(0xFFFFF2D0),
+              border: Border.all(color: Colors.white, width: size * 0.025),
+              boxShadow: const [
+                BoxShadow(
+                  color: Color(0x33000000),
+                  blurRadius: 22,
+                  offset: Offset(0, 12),
+                ),
+              ],
+            ),
+            child: ClipOval(
+              child: item.imageUrl != null
+                  ? Image.network(
+                      item.imageUrl!,
+                      fit: BoxFit.cover,
+                      errorBuilder: (_, __, ___) => const _StarPlaceholder(),
+                      loadingBuilder: (_, child, progress) =>
+                          progress == null ? child : const _StarPlaceholder(),
+                    )
+                  : const _StarPlaceholder(),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _TodaysStarPriceText extends StatelessWidget {
+  final MenuItem item;
+  final double fontSize;
+
+  const _TodaysStarPriceText({
+    required this.item,
+    required this.fontSize,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final text = item.priceVariants.isNotEmpty
+        ? item.priceVariants
+            .map((variant) =>
+                '${variant.label} Rs. ${variant.price.toStringAsFixed(0)}')
+            .join('  ')
+        : 'Rs. ${item.price.toStringAsFixed(0)}';
+    return Text(
+      text,
+      textAlign: TextAlign.center,
+      style: GoogleFonts.bangers(
+        fontSize: item.priceVariants.isNotEmpty ? fontSize * 0.74 : fontSize,
+        color: const Color(0xFF25E6FF),
+        letterSpacing: 0.7,
+        shadows: const [
+          Shadow(
+            color: Color(0xFF073B8E),
+            offset: Offset(3, 0),
+          ),
+          Shadow(
+            color: Color(0xFF073B8E),
+            offset: Offset(-3, 0),
+          ),
+          Shadow(
+            color: Color(0xFF073B8E),
+            offset: Offset(0, 3),
+          ),
+          Shadow(
+            color: Color(0xFF073B8E),
+            offset: Offset(0, -3),
+          ),
+          Shadow(
+            color: Color(0x66000000),
+            offset: Offset(5, 5),
+            blurRadius: 1,
+          ),
+        ],
+      ),
+      maxLines: 2,
+      overflow: TextOverflow.ellipsis,
+    );
+  }
+}
+
+class _StarPlaceholder extends StatelessWidget {
+  const _StarPlaceholder();
+
+  @override
+  Widget build(BuildContext context) {
+    return const ColoredBox(
+      color: Color(0xFFFFE6B1),
+      child: Center(
+        child: Text(
+          'STAR',
+          style: TextStyle(
+            color: Color(0xFFC62828),
+            fontSize: 30,
+            fontWeight: FontWeight.w900,
+            letterSpacing: 1.5,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ComicStarBackground extends StatelessWidget {
+  const _ComicStarBackground();
+
+  @override
+  Widget build(BuildContext context) {
+    return const ColoredBox(
+      color: Color(0xFFF04A4A),
+      child: CustomPaint(
+        painter: _ComicStarBackgroundPainter(),
+      ),
+    );
+  }
+}
+
+class _ComicStarBackgroundPainter extends CustomPainter {
+  const _ComicStarBackgroundPainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width * 0.5, size.height * 0.44);
+    const rayCount = 28;
+    final radius = size.longestSide * 0.78;
+    final redPaint = Paint()
+      ..color = const Color(0xFFFF5A5A).withValues(alpha: 0.46)
+      ..style = PaintingStyle.fill;
+    final paleRedPaint = Paint()
+      ..color = const Color(0xFFFF7A7A).withValues(alpha: 0.40)
+      ..style = PaintingStyle.fill;
+    final linePaint = Paint()
+      ..color = const Color(0xFFE51F2D).withValues(alpha: 0.22)
+      ..strokeWidth = 3
+      ..style = PaintingStyle.stroke;
+
+    for (var i = 0; i < rayCount; i++) {
+      final a1 = (i / rayCount) * pi * 2;
+      final a2 = ((i + 0.58) / rayCount) * pi * 2;
+      final path = Path()
+        ..moveTo(center.dx, center.dy)
+        ..lineTo(center.dx + cos(a1) * radius, center.dy + sin(a1) * radius)
+        ..lineTo(center.dx + cos(a2) * radius, center.dy + sin(a2) * radius)
+        ..close();
+      canvas.drawPath(path, i.isEven ? redPaint : paleRedPaint);
+      if (i.isEven) canvas.drawPath(path, linePaint);
+    }
+
+    final dotPaint = Paint()
+      ..color = const Color(0xFFFFD1D1).withValues(alpha: 0.34)
+      ..style = PaintingStyle.fill;
+    const spacing = 22.0;
+    for (var y = 8.0; y < size.height; y += spacing) {
+      for (var x = 8.0; x < size.width; x += spacing) {
+        final dist = (Offset(x, y) - center).distance;
+        final dotRadius = dist < radius * 0.55 ? 2.2 : 1.2;
+        canvas.drawCircle(Offset(x, y), dotRadius, dotPaint);
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+class _DottedCirclePainter extends CustomPainter {
+  const _DottedCirclePainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = size.width / 2;
+    final basePaint = Paint()
+      ..color = const Color(0xFFC62828)
+      ..style = PaintingStyle.fill;
+    final shadowPaint = Paint()
+      ..color = const Color(0x22000000)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 12);
+    canvas.drawCircle(center.translate(0, 8), radius * 0.94, shadowPaint);
+    canvas.drawCircle(center, radius * 0.92, basePaint);
+
+    final dotPaint = Paint()
+      ..color = const Color(0xFFFFF0BE).withValues(alpha: 0.75)
+      ..style = PaintingStyle.fill;
+    const ringCount = 8;
+    for (var ring = 1; ring <= ringCount; ring++) {
+      final ringRadius = radius * (0.16 + ring * 0.09);
+      final dots = (ringRadius / 5).round().clamp(10, 54);
+      for (var i = 0; i < dots; i++) {
+        final angle = (i / dots) * pi * 2 + ring * 0.23;
+        canvas.drawCircle(
+          Offset(
+            center.dx + cos(angle) * ringRadius,
+            center.dy + sin(angle) * ringRadius,
+          ),
+          radius * 0.012,
+          dotPaint,
+        );
+      }
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
 class _PagedMenu extends StatelessWidget {

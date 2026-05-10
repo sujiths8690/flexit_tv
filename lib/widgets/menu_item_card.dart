@@ -70,14 +70,61 @@ class _MenuItemCardState extends State<MenuItemCard>
       opacity: _fadeAnim,
       child: SlideTransition(
         position: _slideAnim,
-        child: ScaleTransition(
-          scale: _scaleAnim,
-          child: _CardContent(
-            item: widget.item,
-            catTheme: widget.catTheme,
-            fontScale: widget.fontScale,
+        child: _UnavailableTreatment(
+          enabled: !widget.item.isAvailable,
+          child: ScaleTransition(
+            scale: _scaleAnim,
+            child: _CardContent(
+              item: widget.item,
+              catTheme: widget.catTheme,
+              fontScale: widget.fontScale,
+            ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _UnavailableTreatment extends StatelessWidget {
+  final bool enabled;
+  final Widget child;
+
+  const _UnavailableTreatment({
+    required this.enabled,
+    required this.child,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (!enabled) return child;
+
+    return Opacity(
+      opacity: 0.46,
+      child: ColorFiltered(
+        colorFilter: const ColorFilter.matrix(<double>[
+          0.2126,
+          0.7152,
+          0.0722,
+          0,
+          0,
+          0.2126,
+          0.7152,
+          0.0722,
+          0,
+          0,
+          0.2126,
+          0.7152,
+          0.0722,
+          0,
+          0,
+          0,
+          0,
+          0,
+          1,
+          0,
+        ]),
+        child: child,
       ),
     );
   }
