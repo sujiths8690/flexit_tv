@@ -4,6 +4,7 @@
 
 import 'dart:async';
 import 'dart:math';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../models/models.dart';
@@ -12,11 +13,34 @@ import '../widgets/business_brand_mark.dart';
 import '../widgets/combo_offer_showcase.dart';
 import '../widgets/menu_item_row.dart';
 
+List<String> _contentModesFrom(String value) {
+  final modes = value
+      .split(',')
+      .map((mode) => mode.trim())
+      .where((mode) => mode.isNotEmpty)
+      .toList();
+  if (modes.isEmpty || modes.contains('allCategories')) {
+    return const ['category', 'comboOffers', 'todaysStar'];
+  }
+  return modes;
+}
+
+class _ContentSection {
+  final String mode;
+  final List<List<MenuItem>> groups;
+
+  const _ContentSection({
+    required this.mode,
+    required this.groups,
+  });
+}
+
 class MenuBoardScreen extends StatefulWidget {
   final DeviceConfig config;
   final DisplayConfig displayConfig;
   final Size screenSize;
   final Duration initialRevealDelay;
+  final VoidCallback? onCycleComplete;
 
   const MenuBoardScreen({
     super.key,
@@ -24,6 +48,7 @@ class MenuBoardScreen extends StatefulWidget {
     required this.displayConfig,
     required this.screenSize,
     this.initialRevealDelay = Duration.zero,
+    this.onCycleComplete,
   });
 
   @override
@@ -39,6 +64,8 @@ class _MenuBoardScreenState extends State<MenuBoardScreen>
   Timer? _pageTimer;
   List<MenuItem> _items = [];
   List<List<MenuItem>> _categoryGroups = [];
+  List<_ContentSection> _sections = [];
+  int _sectionIndex = 0;
   int _groupIndex = 0;
   int _pageIndex = 0;
   String _contentSignature = '';
@@ -46,8 +73,15 @@ class _MenuBoardScreenState extends State<MenuBoardScreen>
 
   MenuCategory get _category =>
       widget.displayConfig.menuCategory ?? MenuCategory.all;
+  String get _activeContentMode => _sections.isNotEmpty
+      ? _sections[_sectionIndex].mode
+      : _contentModesFrom(widget.displayConfig.contentMode).first;
   String get _sectionHeading {
-    switch (widget.displayConfig.contentMode) {
+    switch (_activeContentMode) {
+      case 'veg':
+        return 'Veg';
+      case 'nonVeg':
+        return 'Non Veg';
       case 'comboOffers':
         return 'Combo Offer';
       case 'todaysStar':
@@ -114,6 +148,8 @@ class _MenuBoardScreenState extends State<MenuBoardScreen>
             widget.displayConfig.showDescription ||
         oldWidget.displayConfig.showProductImage !=
             widget.displayConfig.showProductImage ||
+        oldWidget.displayConfig.showDietTags !=
+            widget.displayConfig.showDietTags ||
         oldWidget.displayConfig.headingFontScale !=
             widget.displayConfig.headingFontScale ||
         oldWidget.displayConfig.nameFontScale !=
@@ -149,28 +185,83 @@ class _MenuBoardScreenState extends State<MenuBoardScreen>
     return items
         .map(
           (item) =>
-              '${item.id}:${item.name}:${item.price}:${item.originalPrice ?? ''}:${item.isAvailable}:${item.priceVariants.map((variant) => '${variant.label}-${variant.price}').join(',')}:${item.imageUrl ?? ''}:${item.categoryId ?? ''}:${item.comboItems.map((comboItem) => '${comboItem.product.id}-${comboItem.product.name}-${comboItem.product.price}-${comboItem.product.isAvailable}-${comboItem.quantity}-${comboItem.product.imageUrl ?? ''}').join(',')}',
+              '${item.id}:${item.name}:${item.price}:${item.originalPrice ?? ''}:${item.isAvailable}:${item.tags.join(',')}:${item.priceVariants.map((variant) => '${variant.label}-${variant.price}').join(',')}:${item.imageUrl ?? ''}:${item.categoryId ?? ''}:${item.categoryName ?? ''}:${item.comboItems.map((comboItem) => '${comboItem.product.id}-${comboItem.product.name}-${comboItem.product.price}-${comboItem.product.isAvailable}-${comboItem.quantity}-${comboItem.product.imageUrl ?? ''}').join(',')}',
         )
         .join('|');
   }
 
   void _loadItems() {
     final all = widget.displayConfig.menuItems;
+    final modes = _contentModesFrom(widget.displayConfig.contentMode)
+        .where((mode) => mode != 'allMedia' && mode != 'media')
+        .toList();
     setState(() {
       _pageIndex = 0;
       _groupIndex = 0;
-      _categoryGroups = _buildCategoryGroups(all);
+      _sectionIndex = 0;
+      _sections = _buildContentSections(
+        all,
+        modes.isEmpty ? ['allCategories'] : modes,
+      );
+      _categoryGroups = _sections.isNotEmpty
+          ? _sections.first.groups
+          : _buildCategoryGroups(
+              all,
+              'allCategories',
+            );
       _items = _categoryGroups.isNotEmpty ? _categoryGroups.first : all;
     });
   }
 
-  List<List<MenuItem>> _buildCategoryGroups(List<MenuItem> all) {
-    if (widget.displayConfig.contentMode != 'allCategories') {
+  List<_ContentSection> _buildContentSections(
+    List<MenuItem> all,
+    List<String> modes,
+  ) {
+    final sections = <_ContentSection>[];
+    for (final mode in modes) {
+      final sectionItems = switch (mode) {
+        'veg' => all.where(
+            (item) => item.tags.contains('veg') && item.comboItems.isEmpty,
+          ),
+        'nonVeg' => all.where(
+            (item) => item.tags.contains('nonVeg') && item.comboItems.isEmpty,
+          ),
+        'comboOffers' => all.where((item) => item.comboItems.isNotEmpty),
+        'todaysStar' => all.where(
+            (item) =>
+                item.isFeatured &&
+                item.comboItems.isEmpty &&
+                !_isAlreadyShownInSelectedCategory(item),
+          ),
+        _ => all.where((item) => item.comboItems.isEmpty),
+      }
+          .toList();
+      if (sectionItems.isEmpty) continue;
+      sections.add(
+        _ContentSection(
+          mode: mode,
+          groups: _buildCategoryGroups(sectionItems, mode),
+        ),
+      );
+    }
+    return sections;
+  }
+
+  bool _isAlreadyShownInSelectedCategory(MenuItem item) {
+    final selectedCategoryId = widget.displayConfig.selectedCategoryId;
+    return selectedCategoryId != null && item.categoryId == selectedCategoryId;
+  }
+
+  List<List<MenuItem>> _buildCategoryGroups(List<MenuItem> all, String mode) {
+    if (mode != 'allCategories' && mode != 'category') {
       return [
         _category == MenuCategory.all
             ? all
             : all.where((i) => i.category == _category).toList()
       ];
+    }
+    if (mode == 'category' && widget.displayConfig.selectedCategoryId != null) {
+      return [all];
     }
     final groups = <String, List<MenuItem>>{};
     for (final item in all) {
@@ -192,25 +283,46 @@ class _MenuBoardScreenState extends State<MenuBoardScreen>
     _pageTimer?.cancel();
     _pageTimer = Timer.periodic(Duration(seconds: interval), (_) {
       if (!mounted || _items.isEmpty) return;
-      if (widget.displayConfig.contentMode == 'comboOffers') {
+      if (_activeContentMode == 'comboOffers') {
         final offersPerPage = ComboOfferShowcase.offersPerPageFor(
           widget.screenSize,
         );
         final pageCount = (_items.length / offersPerPage).ceil();
-        if (pageCount <= 1) return;
-        setState(() => _pageIndex = (_pageIndex + 1) % pageCount);
+        if (pageCount <= 1) {
+          _advanceSection();
+          return;
+        }
+        setState(() {
+          if (_pageIndex + 1 < pageCount) {
+            _pageIndex++;
+          } else {
+            _setNextSection();
+          }
+        });
         return;
       }
-      if (widget.displayConfig.contentMode == 'todaysStar') {
-        if (_items.length <= 1) return;
-        setState(() => _pageIndex = (_pageIndex + 1) % _items.length);
+      if (_activeContentMode == 'todaysStar') {
+        if (_items.length <= 1) {
+          _advanceSection();
+          return;
+        }
+        setState(() {
+          if (_pageIndex + 1 < _items.length) {
+            _pageIndex++;
+          } else {
+            _setNextSection();
+          }
+        });
         return;
       }
       final itemsPerPage = _itemsPerPage(widget.screenSize);
       final pageCount = (_items.length / itemsPerPage).ceil();
       final visibleGroupCount =
           _categoryGroups.where((group) => group.isNotEmpty).length;
-      if (pageCount <= 1 && visibleGroupCount <= 1) return;
+      if (pageCount <= 1 && visibleGroupCount <= 1) {
+        _advanceSection();
+        return;
+      }
       setState(() {
         if (_pageIndex + 1 < pageCount) {
           _pageIndex++;
@@ -218,11 +330,46 @@ class _MenuBoardScreenState extends State<MenuBoardScreen>
         }
         _pageIndex = 0;
         if (_categoryGroups.length > 1) {
-          _groupIndex = (_groupIndex + 1) % _categoryGroups.length;
-          _items = _categoryGroups[_groupIndex];
+          final nextGroupIndex = (_groupIndex + 1) % _categoryGroups.length;
+          if (nextGroupIndex == 0 && _sections.length > 1) {
+            _setNextSection();
+          } else {
+            _groupIndex = nextGroupIndex;
+            _items = _categoryGroups[_groupIndex];
+            if (nextGroupIndex == 0) _notifyCycleComplete();
+          }
+        } else {
+          _setNextSection();
         }
       });
     });
+  }
+
+  void _advanceSection() {
+    if (_sections.length <= 1) {
+      _notifyCycleComplete();
+      return;
+    }
+    setState(_setNextSection);
+  }
+
+  void _setNextSection() {
+    final nextSectionIndex = (_sectionIndex + 1) % _sections.length;
+    final cycleComplete = nextSectionIndex == 0 && _sections.length > 1;
+    _sectionIndex = nextSectionIndex;
+    _categoryGroups = _sections[_sectionIndex].groups;
+    _groupIndex = 0;
+    _pageIndex = 0;
+    _items = _categoryGroups.isNotEmpty ? _categoryGroups.first : [];
+    if (cycleComplete) _notifyCycleComplete();
+  }
+
+  void _notifyCycleComplete() {
+    if (widget.onCycleComplete != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) widget.onCycleComplete?.call();
+      });
+    }
   }
 
   @override
@@ -237,14 +384,7 @@ class _MenuBoardScreenState extends State<MenuBoardScreen>
   @override
   Widget build(BuildContext context) {
     final theme = AppTheme.menuTheme(_themeType);
-    final baseCatTheme = AppTheme.categoryThemes[_category.name] ??
-        AppTheme.categoryThemes['all']!;
-    final catTheme = AppTheme.colorizedCategoryTheme(
-      baseCatTheme,
-      widget.config.themeColor.isNotEmpty
-          ? widget.config.themeColor
-          : widget.displayConfig.themeColor,
-    );
+    final catTheme = _activeCategoryTheme;
 
     return FadeTransition(
       opacity: _fadeAnim,
@@ -265,7 +405,7 @@ class _MenuBoardScreenState extends State<MenuBoardScreen>
                   ? const SizedBox.shrink()
                   : _items.isEmpty
                       ? _EmptyState(catTheme: catTheme, theme: theme)
-                      : widget.displayConfig.contentMode == 'comboOffers'
+                      : _activeContentMode == 'comboOffers'
                           ? ComboOfferShowcase(
                               combos: _items,
                               pageIndex: _pageIndex,
@@ -285,7 +425,7 @@ class _MenuBoardScreenState extends State<MenuBoardScreen>
                               showProductImage:
                                   widget.displayConfig.showProductImage,
                             )
-                          : widget.displayConfig.contentMode == 'todaysStar'
+                          : _activeContentMode == 'todaysStar'
                               ? _TodaysStarShowcase(
                                   items: _items,
                                   pageIndex: _pageIndex,
@@ -320,7 +460,10 @@ class _MenuBoardScreenState extends State<MenuBoardScreen>
                                       widget.displayConfig.showDescription,
                                   showProductImage:
                                       widget.displayConfig.showProductImage,
+                                  showDietTags:
+                                      widget.displayConfig.showDietTags,
                                   heading: _sectionHeading,
+                                  sectionMode: _activeContentMode,
                                   headingFontScale:
                                       widget.displayConfig.headingFontScale,
                                   nameFontScale:
@@ -353,6 +496,20 @@ class _MenuBoardScreenState extends State<MenuBoardScreen>
     final hasVisibleLogo = widget.displayConfig.showLogo &&
         (widget.config.businessLogoUrl?.trim().isNotEmpty ?? false);
     return hasVisibleName || hasVisibleLogo;
+  }
+
+  CategoryTheme get _activeCategoryTheme {
+    final mode = _activeContentMode;
+    final baseCatTheme = AppTheme.categoryThemes[mode] ??
+        AppTheme.categoryThemes[_category.name] ??
+        AppTheme.categoryThemes['all']!;
+    if (mode == 'veg' || mode == 'nonVeg') return baseCatTheme;
+    return AppTheme.colorizedCategoryTheme(
+      baseCatTheme,
+      widget.config.themeColor.isNotEmpty
+          ? widget.config.themeColor
+          : widget.displayConfig.themeColor,
+    );
   }
 }
 
@@ -683,12 +840,11 @@ class _RedDottedProductCircle extends StatelessWidget {
             ),
             child: ClipOval(
               child: item.imageUrl != null
-                  ? Image.network(
-                      item.imageUrl!,
+                  ? CachedNetworkImage(
+                      imageUrl: item.imageUrl!,
                       fit: BoxFit.cover,
-                      errorBuilder: (_, __, ___) => const _StarPlaceholder(),
-                      loadingBuilder: (_, child, progress) =>
-                          progress == null ? child : const _StarPlaceholder(),
+                      placeholder: (_, __) => const _StarPlaceholder(),
+                      errorWidget: (_, __, ___) => const _StarPlaceholder(),
                     )
                   : const _StarPlaceholder(),
             ),
@@ -890,7 +1046,9 @@ class _PagedMenu extends StatelessWidget {
   final bool showPrice;
   final bool showDescription;
   final bool showProductImage;
+  final bool showDietTags;
   final String heading;
+  final String sectionMode;
   final double headingFontScale;
   final double nameFontScale;
   final double descriptionFontScale;
@@ -908,7 +1066,9 @@ class _PagedMenu extends StatelessWidget {
     required this.showPrice,
     required this.showDescription,
     required this.showProductImage,
+    required this.showDietTags,
     required this.heading,
+    required this.sectionMode,
     required this.headingFontScale,
     required this.nameFontScale,
     required this.descriptionFontScale,
@@ -967,6 +1127,7 @@ class _PagedMenu extends StatelessWidget {
               showPrice: showPrice,
               showDescription: showDescription,
               showProductImage: showProductImage,
+              showDietTags: showDietTags,
               nameFontScale: nameFontScale,
               descriptionFontScale: descriptionFontScale,
               priceFontScale: priceFontScale,
@@ -1016,8 +1177,10 @@ class _PagedMenu extends StatelessWidget {
               children: [
                 _StandardSectionHeading(
                   text: heading,
+                  sectionMode: sectionMode,
                   theme: theme,
                   catTheme: catTheme,
+                  showDietTags: showDietTags,
                   fontScale: headingFontScale,
                   screenWidth: viewportSize.width,
                   height: metrics.headingHeight,
@@ -1071,16 +1234,20 @@ class _MenuPageMetrics {
 
 class _StandardSectionHeading extends StatelessWidget {
   final String text;
+  final String sectionMode;
   final TvMenuThemeData theme;
   final CategoryTheme catTheme;
+  final bool showDietTags;
   final double fontScale;
   final double screenWidth;
   final double height;
 
   const _StandardSectionHeading({
     required this.text,
+    required this.sectionMode,
     required this.theme,
     required this.catTheme,
+    required this.showDietTags,
     required this.fontScale,
     required this.screenWidth,
     required this.height,
@@ -1095,30 +1262,104 @@ class _StandardSectionHeading extends StatelessWidget {
         child: Center(
           child: FittedBox(
             fit: BoxFit.scaleDown,
-            child: Text(
-              text.toUpperCase(),
-              textAlign: TextAlign.center,
-              style: GoogleFonts.playfairDisplay(
-                fontSize: ((screenWidth * 0.034) * fontScale).clamp(30.0, 68.0),
-                fontWeight: FontWeight.w800,
-                color: theme.primaryText,
-                height: 1,
-                letterSpacing: 1.2,
-                shadows: [
-                  Shadow(
-                    color: catTheme.primary.withValues(alpha: 0.28),
-                    blurRadius: 18,
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  text.toUpperCase(),
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.playfairDisplay(
+                    fontSize:
+                        ((screenWidth * 0.034) * fontScale).clamp(30.0, 68.0),
+                    fontWeight: FontWeight.w800,
+                    color: theme.primaryText,
+                    height: 1,
+                    letterSpacing: 1.2,
+                    shadows: [
+                      Shadow(
+                        color: catTheme.primary.withValues(alpha: 0.28),
+                        blurRadius: 18,
+                      ),
+                    ],
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.visible,
+                ),
+                if (showDietTags &&
+                    (sectionMode == 'veg' || sectionMode == 'nonVeg')) ...[
+                  SizedBox(width: (screenWidth * 0.012).clamp(10.0, 22.0)),
+                  _DietSectionSymbol(
+                    mode: sectionMode,
+                    size: ((screenWidth * 0.018) * fontScale).clamp(22.0, 38.0),
                   ),
                 ],
-              ),
-              maxLines: 1,
-              overflow: TextOverflow.visible,
+              ],
             ),
           ),
         ),
       ),
     );
   }
+}
+
+class _DietSectionSymbol extends StatelessWidget {
+  final String mode;
+  final double size;
+
+  const _DietSectionSymbol({required this.mode, required this.size});
+
+  @override
+  Widget build(BuildContext context) {
+    final isVeg = mode == 'veg';
+    final color = isVeg ? AppTheme.vegGreen : const Color(0xFFB33A2B);
+    return Container(
+      width: size,
+      height: size,
+      decoration: BoxDecoration(
+        color: Colors.transparent,
+        border: Border.all(color: color, width: max(2.0, size * 0.08)),
+        borderRadius: BorderRadius.circular(size * 0.12),
+      ),
+      child: Center(
+        child: isVeg
+            ? Container(
+                width: size * 0.42,
+                height: size * 0.42,
+                decoration: BoxDecoration(
+                  color: color,
+                  shape: BoxShape.circle,
+                ),
+              )
+            : CustomPaint(
+                size: Size.square(size * 0.48),
+                painter: _NonVegTrianglePainter(color),
+              ),
+      ),
+    );
+  }
+}
+
+class _NonVegTrianglePainter extends CustomPainter {
+  final Color color;
+
+  const _NonVegTrianglePainter(this.color);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.fill;
+    final path = Path()
+      ..moveTo(size.width / 2, 0)
+      ..lineTo(size.width, size.height)
+      ..lineTo(0, size.height)
+      ..close();
+    canvas.drawPath(path, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _NonVegTrianglePainter oldDelegate) =>
+      oldDelegate.color != color;
 }
 
 class _RowDivider extends StatelessWidget {

@@ -17,6 +17,7 @@ import '../models/models.dart';
 class DeviceService extends ChangeNotifier with WidgetsBindingObserver {
   static const String _baseUrl = 'http://192.168.29.184:4000';
   static const String _wsUrl = 'ws://192.168.29.184:4000/realtime-ws';
+  static const String _menuConfigCachePrefix = 'cached_menu_config_';
   static const Duration _requestTimeout = Duration(seconds: 3);
   static const Duration _reconnectDelay = Duration(seconds: 5);
   static const Duration _pingInterval = Duration(seconds: 20);
@@ -51,12 +52,17 @@ class DeviceService extends ChangeNotifier with WidgetsBindingObserver {
 
     try {
       _deviceCode = await _loadOrCreateDeviceCode();
-      _config = _unpairedConfig();
+      _config = await _loadCachedMenuConfig() ?? _unpairedConfig();
+      if (_config?.isPaired == true) {
+        _hasEverPaired = true;
+      }
       _isLoading = false;
       _error = null;
       notifyListeners();
 
-      await _fetchConfig();
+      if (_config?.isPaired != true || _config?.displayConfig == null) {
+        await _fetchConfig();
+      }
       _connectRealtime();
     } catch (_) {
       if (!_isDeviceCodeReady) {
@@ -119,19 +125,20 @@ class DeviceService extends ChangeNotifier with WidgetsBindingObserver {
           _config = DeviceConfig.fromJson(data);
           if (_config?.isPaired == true) {
             _hasEverPaired = true;
+            await _saveMenuConfigCache(_config);
           }
         } else {
-          _config = _hasEverPaired ? _offlinePairedConfig() : _unpairedConfig();
+          _config = await _offlinePairedConfig();
         }
       } else {
-        _config = _hasEverPaired ? _offlinePairedConfig() : _unpairedConfig();
+        _config = await _offlinePairedConfig();
       }
 
       _isLoading = false;
       _error = null;
     } catch (_) {
       _configStatus = 'config unavailable';
-      _config = _hasEverPaired ? _offlinePairedConfig() : _unpairedConfig();
+      _config = await _offlinePairedConfig();
       _isLoading = false;
       _error = null;
     }
@@ -237,7 +244,6 @@ class DeviceService extends ChangeNotifier with WidgetsBindingObserver {
 
     if (state == AppLifecycleState.resumed) {
       _connectRealtime();
-      _fetchConfig();
       return;
     }
 
@@ -261,6 +267,7 @@ class DeviceService extends ChangeNotifier with WidgetsBindingObserver {
       if (type == 'DEVICE_DELETED') {
         _config = _unpairedConfig();
         _hasEverPaired = false;
+        _clearMenuConfigCache();
         _isLoading = false;
         _error = null;
         notifyListeners();
@@ -274,6 +281,7 @@ class DeviceService extends ChangeNotifier with WidgetsBindingObserver {
 
         try {
           _config = DeviceConfig.fromJson(data);
+          _saveMenuConfigCache(_config);
         } catch (_) {
           if (data['isPaired'] == true) {
             _config = DeviceConfig(
@@ -286,8 +294,10 @@ class DeviceService extends ChangeNotifier with WidgetsBindingObserver {
               themeColor: _config?.themeColor ?? 'gold',
               displayConfig: _config?.displayConfig,
             );
+            _saveMenuConfigCache(_config);
           } else {
             _config = _unpairedConfig();
+            _clearMenuConfigCache();
           }
         }
 
@@ -304,11 +314,13 @@ class DeviceService extends ChangeNotifier with WidgetsBindingObserver {
     _connectRealtime();
   }
 
-  void useOfflineStartupFallback() {
+  Future<void> useOfflineStartupFallback() async {
     if (!_isDeviceCodeReady) {
       _deviceCode = _generateDeviceCode();
     }
-    _config = _hasEverPaired ? _offlinePairedConfig() : _unpairedConfig();
+    _config = _hasEverPaired
+        ? await _loadCachedMenuConfig() ?? _unpairedConfig()
+        : _unpairedConfig();
     _isLoading = false;
     _error = null;
     notifyListeners();
@@ -338,7 +350,11 @@ class DeviceService extends ChangeNotifier with WidgetsBindingObserver {
     );
   }
 
-  DeviceConfig _offlinePairedConfig() {
+  Future<DeviceConfig> _offlinePairedConfig() async {
+    if (!_hasEverPaired) return _unpairedConfig();
+    final cached = await _loadCachedMenuConfig();
+    if (cached != null) return cached;
+
     return DeviceConfig(
       deviceCode: _deviceCode,
       isPaired: true,
@@ -349,5 +365,46 @@ class DeviceService extends ChangeNotifier with WidgetsBindingObserver {
       themeColor: _config?.themeColor ?? 'gold',
       displayConfig: null,
     );
+  }
+
+  Future<DeviceConfig?> _loadCachedMenuConfig() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final raw = prefs.getString('$_menuConfigCachePrefix$_deviceCode');
+      if (raw == null || raw.isEmpty) return null;
+      final decoded = jsonDecode(raw);
+      if (decoded is! Map<String, dynamic>) return null;
+      final cached = DeviceConfig.fromJson(decoded);
+      if (!cached.isPaired ||
+          cached.displayConfig?.mode != DisplayMode.menuBoard) {
+        return null;
+      }
+      return cached;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  Future<void> _saveMenuConfigCache(DeviceConfig? config) async {
+    if (config == null ||
+        !config.isPaired ||
+        config.displayConfig?.mode != DisplayMode.menuBoard) {
+      return;
+    }
+
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(
+        '$_menuConfigCachePrefix$_deviceCode',
+        jsonEncode(config.toJson()),
+      );
+    } catch (_) {}
+  }
+
+  Future<void> _clearMenuConfigCache() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.remove('$_menuConfigCachePrefix$_deviceCode');
+    } catch (_) {}
   }
 }

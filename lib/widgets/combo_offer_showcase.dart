@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 import '../models/models.dart';
@@ -321,10 +322,12 @@ class _ComboProductTile extends StatelessWidget {
           clipBehavior: Clip.antiAlias,
           child: !showProductImage || imageUrl == null
               ? _ImageFallback(catTheme: catTheme, theme: theme)
-              : Image.network(
-                  imageUrl,
+              : CachedNetworkImage(
+                  imageUrl: imageUrl,
                   fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) =>
+                  placeholder: (_, __) =>
+                      _ImageFallback(catTheme: catTheme, theme: theme),
+                  errorWidget: (_, __, ___) =>
                       _ImageFallback(catTheme: catTheme, theme: theme),
                 ),
         ),

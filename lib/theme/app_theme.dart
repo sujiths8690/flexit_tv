@@ -54,7 +54,7 @@ class AppTheme {
   static const Color white = Color(0xFFFFFFFF);
   static const Color whiteDim = Color(0x99FFFFFF);
   static const Color vegGreen = Color(0xFF4CAF50);
-  static const Color nonVegRed = Color(0xFFE53935);
+  static const Color nonVegRed = Color(0xFFB33A2B);
   static const Color gold = Color(0xFFD4A853);
   static const Color goldLight = Color(0xFFE8C070);
   static const Color goldDim = Color(0xFF8A6E2A);
@@ -242,18 +242,18 @@ class AppTheme {
       label: 'Veg',
     ),
     'nonVeg': CategoryTheme(
-      primary: Color(0xFFD94040),
-      secondary: Color(0xFF8B1A1A),
-      accent: Color(0xFFFF6B6B),
-      gradient: [Color(0xFFD94040), Color(0xFF8B1A1A)],
+      primary: Color(0xFFB33A2B),
+      secondary: Color(0xFF6F1F17),
+      accent: Color(0xFFE06145),
+      gradient: [Color(0xFFB33A2B), Color(0xFF6F1F17)],
       icon: 'NV',
       label: 'Non Veg',
     ),
     'non_veg': CategoryTheme(
-      primary: Color(0xFFD94040),
-      secondary: Color(0xFF8B1A1A),
-      accent: Color(0xFFFF6B6B),
-      gradient: [Color(0xFFD94040), Color(0xFF8B1A1A)],
+      primary: Color(0xFFB33A2B),
+      secondary: Color(0xFF6F1F17),
+      accent: Color(0xFFE06145),
+      gradient: [Color(0xFFB33A2B), Color(0xFF6F1F17)],
       icon: 'NV',
       label: 'Non Veg',
     ),

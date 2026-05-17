@@ -3,6 +3,7 @@
 // Full-width alternating menu row with a large circular food image.
 
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'dart:math';
 import '../models/models.dart';
@@ -19,6 +20,7 @@ class MenuItemRow extends StatefulWidget {
   final bool showPrice;
   final bool showDescription;
   final bool showProductImage;
+  final bool showDietTags;
   final double nameFontScale;
   final double descriptionFontScale;
   final double priceFontScale;
@@ -35,6 +37,7 @@ class MenuItemRow extends StatefulWidget {
     this.showPrice = true,
     this.showDescription = true,
     this.showProductImage = true,
+    this.showDietTags = true,
     this.nameFontScale = 1.0,
     this.descriptionFontScale = 1.0,
     this.priceFontScale = 1.0,
@@ -90,6 +93,7 @@ class _MenuItemRowState extends State<MenuItemRow>
           showPrice: widget.showPrice,
           showDescription: widget.showDescription,
           showProductImage: widget.showProductImage,
+          showDietTags: widget.showDietTags,
           nameFontScale: widget.nameFontScale,
           descriptionFontScale: widget.descriptionFontScale,
           priceFontScale: widget.priceFontScale,
@@ -109,6 +113,7 @@ class _RowContent extends StatelessWidget {
   final bool showPrice;
   final bool showDescription;
   final bool showProductImage;
+  final bool showDietTags;
   final double nameFontScale;
   final double descriptionFontScale;
   final double priceFontScale;
@@ -123,6 +128,7 @@ class _RowContent extends StatelessWidget {
     required this.showPrice,
     required this.showDescription,
     required this.showProductImage,
+    required this.showDietTags,
     required this.nameFontScale,
     required this.descriptionFontScale,
     required this.priceFontScale,
@@ -143,6 +149,7 @@ class _RowContent extends StatelessWidget {
       rowHeight: rowHeight,
       showPrice: showPrice,
       showDescription: showDescription,
+      showDietTags: showDietTags,
       nameFontScale: nameFontScale,
       descriptionFontScale: descriptionFontScale,
       priceFontScale: priceFontScale,
@@ -264,14 +271,13 @@ class _ImageCircle extends StatelessWidget {
         ),
         child: ClipOval(
           child: item.imageUrl != null
-              ? Image.network(
-                  item.imageUrl!,
+              ? CachedNetworkImage(
+                  imageUrl: item.imageUrl!,
                   fit: BoxFit.cover,
-                  errorBuilder: (_, __, ___) =>
+                  placeholder: (_, __) =>
                       _PlaceholderCircle(catTheme: catTheme),
-                  loadingBuilder: (_, child, progress) => progress == null
-                      ? child
-                      : _PlaceholderCircle(catTheme: catTheme),
+                  errorWidget: (_, __, ___) =>
+                      _PlaceholderCircle(catTheme: catTheme),
                 )
               : _PlaceholderCircle(catTheme: catTheme),
         ),
@@ -321,6 +327,7 @@ class _TextBlock extends StatelessWidget {
   final double rowHeight;
   final bool showPrice;
   final bool showDescription;
+  final bool showDietTags;
   final double nameFontScale;
   final double descriptionFontScale;
   final double priceFontScale;
@@ -334,6 +341,7 @@ class _TextBlock extends StatelessWidget {
     required this.rowHeight,
     required this.showPrice,
     required this.showDescription,
+    required this.showDietTags,
     required this.nameFontScale,
     required this.descriptionFontScale,
     required this.priceFontScale,
@@ -459,6 +467,7 @@ class _TextBlock extends StatelessWidget {
                     theme: theme,
                     imageOnLeft: imageOnLeft,
                     fontSize: descFontSize,
+                    showDietTags: showDietTags,
                   ),
                 ],
               ),
@@ -476,6 +485,7 @@ class _MetaRow extends StatelessWidget {
   final TvMenuThemeData theme;
   final bool imageOnLeft;
   final double fontSize;
+  final bool showDietTags;
 
   const _MetaRow({
     required this.item,
@@ -483,14 +493,16 @@ class _MetaRow extends StatelessWidget {
     required this.theme,
     required this.imageOnLeft,
     required this.fontSize,
+    required this.showDietTags,
   });
 
   @override
   Widget build(BuildContext context) {
-    final tags = item.tags
-        .take(2)
-        .map((tag) => _TagChip(tag: tag, catTheme: catTheme))
-        .toList();
+    final dietTag = item.tags.contains('nonVeg')
+        ? 'nonVeg'
+        : item.tags.contains('veg')
+            ? 'veg'
+            : null;
     final originalPrice = item.originalPrice == null
         ? null
         : Text(
@@ -504,7 +516,8 @@ class _MetaRow extends StatelessWidget {
           );
 
     final children = [
-      ...tags,
+      if (showDietTags && dietTag != null)
+        _DietSymbol(tag: dietTag, size: (fontSize * 1.35).clamp(14.0, 24.0)),
       if (originalPrice != null) originalPrice,
     ];
 
@@ -585,33 +598,59 @@ class _PriceText extends StatelessWidget {
   }
 }
 
-class _TagChip extends StatelessWidget {
+class _DietSymbol extends StatelessWidget {
   final String tag;
-  final CategoryTheme catTheme;
+  final double size;
 
-  const _TagChip({required this.tag, required this.catTheme});
+  const _DietSymbol({required this.tag, required this.size});
 
   @override
   Widget build(BuildContext context) {
+    final isVeg = tag == 'veg';
+    final color = isVeg ? AppTheme.vegGreen : AppTheme.nonVegRed;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 3),
+      width: size,
+      height: size,
       decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(20),
-        color: catTheme.primary.withOpacity(0.1),
-        border: Border.all(
-          color: catTheme.primary.withOpacity(0.25),
-          width: 0.8,
-        ),
+        color: Colors.transparent,
+        border: Border.all(color: color, width: max(1.4, size * 0.08)),
+        borderRadius: BorderRadius.circular(size * 0.12),
       ),
-      child: Text(
-        tag,
-        style: GoogleFonts.nunito(
-          fontSize: 11,
-          fontWeight: FontWeight.w700,
-          color: catTheme.primary,
-          letterSpacing: 0.5,
-        ),
+      child: Center(
+        child: isVeg
+            ? Container(
+                width: size * 0.42,
+                height: size * 0.42,
+                decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+              )
+            : CustomPaint(
+                size: Size.square(size * 0.48),
+                painter: _NonVegTrianglePainter(color),
+              ),
       ),
     );
   }
+}
+
+class _NonVegTrianglePainter extends CustomPainter {
+  final Color color;
+
+  const _NonVegTrianglePainter(this.color);
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = color
+      ..style = PaintingStyle.fill;
+    final path = Path()
+      ..moveTo(size.width / 2, 0)
+      ..lineTo(size.width, size.height)
+      ..lineTo(0, size.height)
+      ..close();
+    canvas.drawPath(path, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant _NonVegTrianglePainter oldDelegate) =>
+      oldDelegate.color != color;
 }

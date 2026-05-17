@@ -135,6 +135,7 @@ class DisplayConfig {
   final bool showLogo;
   final bool showCompanyName;
   final bool showProductImage;
+  final bool showDietTags;
   final double headingFontScale;
   final double nameFontScale;
   final double descriptionFontScale;
@@ -164,6 +165,7 @@ class DisplayConfig {
     this.showLogo = true,
     this.showCompanyName = true,
     this.showProductImage = true,
+    this.showDietTags = true,
     this.headingFontScale = 1.0,
     this.nameFontScale = 1.0,
     this.descriptionFontScale = 1.0,
@@ -204,6 +206,7 @@ class DisplayConfig {
       showLogo: json['showLogo'] as bool? ?? true,
       showCompanyName: json['showCompanyName'] as bool? ?? true,
       showProductImage: json['showProductImage'] as bool? ?? true,
+      showDietTags: json['showDietTags'] as bool? ?? true,
       headingFontScale: (json['headingFontScale'] as num?)?.toDouble() ?? 1.0,
       nameFontScale: (json['nameFontScale'] as num?)?.toDouble() ?? 1.0,
       descriptionFontScale:
@@ -239,6 +242,7 @@ class DisplayConfig {
         'showLogo': showLogo,
         'showCompanyName': showCompanyName,
         'showProductImage': showProductImage,
+        'showDietTags': showDietTags,
         'headingFontScale': headingFontScale,
         'nameFontScale': nameFontScale,
         'descriptionFontScale': descriptionFontScale,

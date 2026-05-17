@@ -8,6 +8,7 @@
 //   Desserts  → pink tones, sparkle motif
 
 import 'package:flutter/material.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../models/models.dart';
 import '../theme/app_theme.dart';
@@ -17,6 +18,7 @@ class MenuItemCard extends StatefulWidget {
   final CategoryTheme catTheme;
   final double fontScale;
   final Duration animationDelay;
+  final bool showDietTags;
 
   const MenuItemCard({
     super.key,
@@ -24,6 +26,7 @@ class MenuItemCard extends StatefulWidget {
     required this.catTheme,
     required this.fontScale,
     required this.animationDelay,
+    this.showDietTags = true,
   });
 
   @override
@@ -78,6 +81,7 @@ class _MenuItemCardState extends State<MenuItemCard>
               item: widget.item,
               catTheme: widget.catTheme,
               fontScale: widget.fontScale,
+              showDietTags: widget.showDietTags,
             ),
           ),
         ),
@@ -134,11 +138,13 @@ class _CardContent extends StatelessWidget {
   final MenuItem item;
   final CategoryTheme catTheme;
   final double fontScale;
+  final bool showDietTags;
 
   const _CardContent({
     required this.item,
     required this.catTheme,
     required this.fontScale,
+    required this.showDietTags,
   });
 
   @override
@@ -185,15 +191,13 @@ class _CardContent extends StatelessWidget {
                 children: [
                   // Image
                   item.imageUrl != null
-                      ? Image.network(
-                          item.imageUrl!,
+                      ? CachedNetworkImage(
+                          imageUrl: item.imageUrl!,
                           fit: BoxFit.cover,
-                          errorBuilder: (_, __, ___) =>
+                          errorWidget: (_, __, ___) =>
                               _PlaceholderImage(catTheme: catTheme),
-                          loadingBuilder: (_, child, progress) {
-                            if (progress == null) return child;
-                            return _PlaceholderImage(catTheme: catTheme);
-                          },
+                          placeholder: (_, __) =>
+                              _PlaceholderImage(catTheme: catTheme),
                         )
                       : _PlaceholderImage(catTheme: catTheme),
 
@@ -245,12 +249,13 @@ class _CardContent extends StatelessWidget {
                       ),
                     ),
 
-                  // Diet indicator dot (top-left)
-                  Positioned(
-                    top: 10,
-                    left: 10,
-                    child: _DietIndicator(category: item.category),
-                  ),
+                  // Diet indicator (top-left)
+                  if (showDietTags)
+                    Positioned(
+                      top: 10,
+                      left: 10,
+                      child: _DietIndicator(category: item.category),
+                    ),
                 ],
               ),
             ),
@@ -324,7 +329,7 @@ class _CardContent extends StatelessWidget {
                               ],
                               const Spacer(),
                               // Tags
-                              if (item.tags.isNotEmpty)
+                              if (showDietTags && item.tags.isNotEmpty)
                                 Container(
                                   padding: const EdgeInsets.symmetric(
                                       horizontal: 6, vertical: 2),

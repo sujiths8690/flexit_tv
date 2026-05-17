@@ -29,8 +29,8 @@ class _SplashScreenState extends State<SplashScreen>
   }
 
   void _boot() {
-    _deviceService.initialize().catchError((_) {
-      _deviceService.useOfflineStartupFallback();
+    _deviceService.initialize().catchError((_) async {
+      await _deviceService.useOfflineStartupFallback();
     });
 
     _ctrl.forward().whenComplete(() async {

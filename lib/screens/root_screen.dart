@@ -12,10 +12,23 @@ import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../services/device_service.dart';
 import '../models/models.dart';
+import '../services/local_media_service.dart';
 import '../utils/orientation_helper.dart';
 import 'qr_pairing_screen.dart';
 import 'menu_board_screen.dart';
 import 'media_screen.dart';
+
+List<String> _contentModesFrom(String value) {
+  final modes = value
+      .split(',')
+      .map((mode) => mode.trim())
+      .where((mode) => mode.isNotEmpty)
+      .toList();
+  if (modes.isEmpty || modes.contains('allCategories')) {
+    return const ['category', 'allMedia', 'comboOffers', 'todaysStar'];
+  }
+  return modes;
+}
 
 class RootScreen extends StatefulWidget {
   final DeviceService service;
@@ -123,6 +136,39 @@ class _RootScreenState extends State<RootScreen> {
     }
 
     // ── Menu board mode ───────────────────────────────────────────────────
+    final contentModes = _contentModesFrom(display.contentMode);
+    final hasMediaSection =
+        contentModes.contains('allMedia') || contentModes.contains('media');
+    final hasMenuSection = contentModes.any(
+      (mode) =>
+          mode == 'allCategories' ||
+          mode == 'category' ||
+          mode == 'comboOffers' ||
+          mode == 'todaysStar',
+    );
+
+    if (hasMediaSection && hasMenuSection) {
+      return LayoutBuilder(
+        builder: (context, constraints) {
+          final screenSize = Size(constraints.maxWidth, constraints.maxHeight);
+          final contentSize = OrientationHelper.contentSizeFor(
+            orientation: config.orientation,
+            screenSize: screenSize,
+          );
+          final mixed = _MixedDisplayScreen(
+            config: config,
+            display: display,
+            screenSize: contentSize,
+          );
+          return OrientationHelper.applyTransform(
+            orientation: config.orientation,
+            screenSize: screenSize,
+            child: mixed,
+          );
+        },
+      );
+    }
+
     return LayoutBuilder(
       builder: (context, constraints) {
         final screenSize = Size(constraints.maxWidth, constraints.maxHeight);
@@ -241,6 +287,143 @@ DateTime? _nextScheduleStart(DisplayConfig display) {
   }
 
   return current < end ? startToday : startToday.add(const Duration(days: 1));
+}
+
+class _MixedDisplayScreen extends StatefulWidget {
+  final DeviceConfig config;
+  final DisplayConfig display;
+  final Size screenSize;
+
+  const _MixedDisplayScreen({
+    required this.config,
+    required this.display,
+    required this.screenSize,
+  });
+
+  @override
+  State<_MixedDisplayScreen> createState() => _MixedDisplayScreenState();
+}
+
+class _MixedDisplayScreenState extends State<_MixedDisplayScreen> {
+  Timer? _timer;
+  int _index = 0;
+  List<DisplayMediaItem> _localMediaItems = const [];
+  bool _isScanningLocalMedia = false;
+
+  List<String> get _contentModes =>
+      _contentModesFrom(widget.display.contentMode);
+
+  bool get _usesBackendMedia => _contentModes.contains('media');
+
+  List<DisplayMediaItem> get _availableMediaItems => _usesBackendMedia &&
+          widget.display.mediaItems.isNotEmpty
+      ? widget.display.mediaItems
+      : _localMediaItems;
+
+  bool get _hasMediaContent =>
+      _availableMediaItems.isNotEmpty;
+
+  @override
+  void initState() {
+    super.initState();
+    _scanLocalMediaIfNeeded();
+    _startTimer();
+  }
+
+  @override
+  void didUpdateWidget(_MixedDisplayScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.display.contentMode != widget.display.contentMode ||
+        oldWidget.display.autoScrollIntervalSeconds !=
+            widget.display.autoScrollIntervalSeconds ||
+        oldWidget.display.mediaItems.length != widget.display.mediaItems.length) {
+      _index = 0;
+      _scanLocalMediaIfNeeded();
+      _startTimer();
+    }
+  }
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  void _startTimer() {
+    _timer?.cancel();
+    if (!_hasMediaContent || _index == 0) return;
+    final seconds = widget.display.autoScrollIntervalSeconds ?? 8;
+    _timer = Timer.periodic(Duration(seconds: seconds < 6 ? 6 : seconds), (_) {
+      if (!mounted) return;
+      setState(() => _index = 0);
+      _timer?.cancel();
+    });
+  }
+
+  void _showMediaAfterMenuCycle() {
+    if (!_hasMediaContent || _index == 1) return;
+    setState(() => _index = 1);
+    _startTimer();
+  }
+
+  Future<void> _scanLocalMediaIfNeeded() async {
+    if (_usesBackendMedia && widget.display.mediaItems.isNotEmpty) return;
+    if (_isScanningLocalMedia) return;
+    _isScanningLocalMedia = true;
+    try {
+      final items = await LocalMediaService.scan();
+      if (!mounted) return;
+      setState(() {
+        _localMediaItems = items;
+        if (items.isEmpty) _index = 0;
+      });
+      _startTimer();
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _localMediaItems = const [];
+        _index = 0;
+      });
+    } finally {
+      _isScanningLocalMedia = false;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final menu = MenuBoardScreen(
+      config: widget.config,
+      displayConfig: widget.display,
+      screenSize: widget.screenSize,
+      initialRevealDelay: const Duration(milliseconds: 550),
+      onCycleComplete: _showMediaAfterMenuCycle,
+    );
+
+    if (!_hasMediaContent) {
+      return menu;
+    }
+
+    final media = MediaScreen(
+      mediaUrl: widget.display.mediaUrl ?? '',
+      mediaType: widget.display.mediaType ?? 'image',
+      mediaItems: _availableMediaItems,
+      slideDurationSeconds: widget.display.autoScrollIntervalSeconds ?? 8,
+      transitionStyle: widget.display.transitionStyle,
+      transitionSpeedSeconds: widget.display.transitionSpeedSeconds,
+      businessName: widget.config.businessName,
+      businessLogoUrl: widget.config.businessLogoUrl,
+      showLogo: widget.display.showLogo,
+      showCompanyName: widget.display.showCompanyName,
+    );
+
+    return IndexedStack(
+      index: _index,
+      children: [
+        menu,
+        media,
+      ],
+    );
+  }
 }
 
 class _WaitingScreen extends StatelessWidget {

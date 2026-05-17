@@ -6,8 +6,10 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'dart:async';
+import 'dart:io';
 import 'package:video_player/video_player.dart';
 import '../models/models.dart';
+import '../services/local_media_service.dart';
 import '../theme/app_theme.dart';
 import '../widgets/business_brand_mark.dart';
 
@@ -44,10 +46,16 @@ class MediaScreen extends StatefulWidget {
 class _MediaScreenState extends State<MediaScreen> {
   Timer? _timer;
   int _index = 0;
+  List<DisplayMediaItem> _localMediaItems = const [];
+  bool _isScanningLocalMedia = false;
+
+  List<DisplayMediaItem> get _playlist =>
+      widget.mediaItems.isNotEmpty ? widget.mediaItems : _localMediaItems;
 
   @override
   void initState() {
     super.initState();
+    _scanLocalMediaIfNeeded();
     _startTimer();
   }
 
@@ -56,6 +64,7 @@ class _MediaScreenState extends State<MediaScreen> {
     super.didUpdateWidget(oldWidget);
     if (_playlistChanged(oldWidget.mediaItems, widget.mediaItems)) {
       _index = 0;
+      _scanLocalMediaIfNeeded();
       _startTimer();
     } else if (oldWidget.slideDurationSeconds != widget.slideDurationSeconds) {
       _startTimer();
@@ -81,7 +90,7 @@ class _MediaScreenState extends State<MediaScreen> {
 
   void _startTimer() {
     _timer?.cancel();
-    if (widget.mediaItems.length <= 1) return;
+    if (_playlist.length <= 1) return;
     _timer = Timer.periodic(
       Duration(seconds: widget.slideDurationSeconds),
       (_) => _advanceMedia(),
@@ -89,8 +98,27 @@ class _MediaScreenState extends State<MediaScreen> {
   }
 
   void _advanceMedia() {
-    if (!mounted || widget.mediaItems.length <= 1) return;
-    setState(() => _index = (_index + 1) % widget.mediaItems.length);
+    if (!mounted || _playlist.length <= 1) return;
+    setState(() => _index = (_index + 1) % _playlist.length);
+  }
+
+  Future<void> _scanLocalMediaIfNeeded() async {
+    if (widget.mediaItems.isNotEmpty || _isScanningLocalMedia) return;
+    _isScanningLocalMedia = true;
+    try {
+      final items = await LocalMediaService.scan();
+      if (!mounted) return;
+      setState(() {
+        _localMediaItems = items;
+        _index = 0;
+      });
+      _startTimer();
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => _localMediaItems = const []);
+    } finally {
+      _isScanningLocalMedia = false;
+    }
   }
 
   @override
@@ -101,8 +129,9 @@ class _MediaScreenState extends State<MediaScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final current = widget.mediaItems.isNotEmpty
-        ? widget.mediaItems[_index % widget.mediaItems.length]
+    final playlist = _playlist;
+    final current = playlist.isNotEmpty
+        ? playlist[_index % playlist.length]
         : DisplayMediaItem(
             id: 0,
             fileName: '',
@@ -123,14 +152,10 @@ class _MediaScreenState extends State<MediaScreen> {
           fit: StackFit.expand,
           children: [
             // ── Media content ─────────────────────────────────────────
-            if (type == 'image')
-              Image.network(
-                url,
-                fit: BoxFit.contain,
-                width: double.infinity,
-                height: double.infinity,
-                errorBuilder: (_, __, ___) => const _MediaError(),
-              )
+            if (playlist.isEmpty)
+              const _LocalMediaEmpty()
+            else if (type == 'image')
+              _MediaImage(url: url)
             else if (!shouldPlayVideo)
               const _MediaError()
             else
@@ -138,7 +163,7 @@ class _MediaScreenState extends State<MediaScreen> {
               // VideoPlayerWidget(url: widget.mediaUrl),
               _VideoPlaceholder(
                 url: url,
-                loop: widget.mediaItems.length <= 1,
+                loop: playlist.length <= 1,
                 onEnded: _advanceMedia,
               ),
 
@@ -182,6 +207,8 @@ class _MediaScreenState extends State<MediaScreen> {
   }
 
   String _absoluteUrl(String url) {
+    if (url.startsWith('file://')) return url;
+    if (url.startsWith('/')) return Uri.file(url).toString();
     if (url.startsWith('http')) return url;
     final path = url.startsWith('/') ? url.substring(1) : url;
     return 'http://192.168.29.184:4002/$path';
@@ -193,7 +220,35 @@ class _MediaScreenState extends State<MediaScreen> {
     return path.endsWith('.mp4') ||
         path.endsWith('.m4v') ||
         path.endsWith('.mov') ||
+        path.endsWith('.mkv') ||
         path.endsWith('.m3u8');
+  }
+}
+
+class _MediaImage extends StatelessWidget {
+  final String url;
+
+  const _MediaImage({required this.url});
+
+  @override
+  Widget build(BuildContext context) {
+    if (url.startsWith('file://')) {
+      return Image.file(
+        File(Uri.parse(url).toFilePath()),
+        fit: BoxFit.contain,
+        width: double.infinity,
+        height: double.infinity,
+        errorBuilder: (_, __, ___) => const _MediaError(),
+      );
+    }
+
+    return Image.network(
+      url,
+      fit: BoxFit.contain,
+      width: double.infinity,
+      height: double.infinity,
+      errorBuilder: (_, __, ___) => const _MediaError(),
+    );
   }
 }
 
@@ -257,7 +312,9 @@ class _VideoPlayerState extends State<_VideoPlayer> {
   void _load() {
     _failed = false;
     _ended = false;
-    _controller = VideoPlayerController.networkUrl(Uri.parse(widget.url))
+    _controller = widget.url.startsWith('file://')
+        ? VideoPlayerController.file(File(Uri.parse(widget.url).toFilePath()))
+        : VideoPlayerController.networkUrl(Uri.parse(widget.url))
       ..setLooping(widget.loop)
       ..addListener(_handlePlaybackUpdate)
       ..initialize().then((_) {
@@ -302,6 +359,46 @@ class _VideoPlayerState extends State<_VideoPlayer> {
         width: _controller.value.size.width,
         height: _controller.value.size.height,
         child: VideoPlayer(_controller),
+      ),
+    );
+  }
+}
+
+class _LocalMediaEmpty extends StatelessWidget {
+  const _LocalMediaEmpty();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: AppTheme.background,
+      child: Center(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(
+              Icons.usb_rounded,
+              color: AppTheme.whiteDim,
+              size: 60,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'No local media found',
+              style: GoogleFonts.nunito(
+                color: AppTheme.whiteDim,
+                fontSize: 20,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Put images or videos in flexit/media on the pendrive.',
+              style: GoogleFonts.nunito(
+                color: AppTheme.whiteDim,
+                fontSize: 14,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
