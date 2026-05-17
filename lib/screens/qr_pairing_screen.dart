@@ -11,7 +11,6 @@ import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../theme/app_theme.dart';
 import '../widgets/qr_code_widget.dart';
-import '../widgets/character_video_widget.dart';
 
 class QrPairingScreen extends StatefulWidget {
   final String deviceCode;
@@ -42,7 +41,7 @@ class _QrPairingScreenState extends State<QrPairingScreen>
 
   int _tipIndex = 0;
   static const List<String> _tips = [
-    'Open your MenuBoard app',
+    'Open your flexit app',
     'Tap  +  and choose "Add Display"',
     'Scan the QR code or enter the device code',
     "That's it — your menu goes live!",
@@ -132,129 +131,153 @@ class _QrPairingScreenState extends State<QrPairingScreen>
           SafeArea(
             child: isPortrait
                 ? _buildPortraitLayout(size)
-                : _buildLandscapeLayout(size),
+                : _buildLandscapeLayout(),
           ),
 
           // ── Mascot at bottom ───────────────────────────────────────────
-          const Positioned(
-            bottom: 20,
-            right: 20,
-            child: CharacterVideoWidget(
-              assetPath: 'assets/character/namaste.webm',
-            ),
-          ),
         ],
       ),
     );
   }
 
-  Widget _buildLandscapeLayout(Size size) {
-    return Row(
-      children: [
-        // Left: branding & instructions
-        Expanded(
-          child: Padding(
-            padding: const EdgeInsets.fromLTRB(60, 40, 40, 120),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                // Logo mark
-                Container(
-                  width: 56,
-                  height: 56,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(14),
-                    gradient: const LinearGradient(
-                      colors: [AppTheme.gold, AppTheme.goldDim],
-                    ),
-                  ),
-                  child: Center(
-                    child: Text(
-                      'M',
-                      style: TextStyle(
-                        fontFamily: GoogleFonts.playfairDisplay().fontFamily,
-                        fontSize: 30,
-                        color: AppTheme.background,
-                        fontWeight: FontWeight.w700,
+  Widget _buildLandscapeLayout() {
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final compactHeight = constraints.maxHeight < 560;
+        final veryCompactHeight = constraints.maxHeight < 460;
+        final horizontalPadding = compactHeight ? 36.0 : 60.0;
+        final verticalPadding = compactHeight ? 24.0 : 40.0;
+        final titleSize =
+            veryCompactHeight ? 30.0 : (compactHeight ? 34.0 : 42.0);
+        final tipSize = compactHeight ? 17.0 : 20.0;
+        final logoSize = compactHeight ? 46.0 : 56.0;
+        final qrSize = min(
+          constraints.maxHeight * (compactHeight ? 0.50 : 0.55),
+          compactHeight ? 280.0 : 320.0,
+        );
+
+        return Row(
+          children: [
+            // Left: branding & instructions
+            Expanded(
+              child: Padding(
+                padding: EdgeInsets.fromLTRB(
+                  horizontalPadding,
+                  verticalPadding,
+                  compactHeight ? 28 : 40,
+                  verticalPadding,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    // Logo mark
+                    Container(
+                      width: logoSize,
+                      height: logoSize,
+                      decoration: BoxDecoration(
+                        borderRadius:
+                            BorderRadius.circular(compactHeight ? 12 : 14),
+                        gradient: const LinearGradient(
+                          colors: [AppTheme.gold, AppTheme.goldDim],
+                        ),
+                      ),
+                      child: Center(
+                        child: Text(
+                          'M',
+                          style: TextStyle(
+                            fontFamily:
+                                GoogleFonts.playfairDisplay().fontFamily,
+                            fontSize: compactHeight ? 25 : 30,
+                            color: AppTheme.background,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
                       ),
                     ),
-                  ),
-                ),
-                const SizedBox(height: 32),
-                Text(
-                  'Connect this\ndisplay to your\nbusiness',
-                  style: TextStyle(
-                    fontFamily: GoogleFonts.playfairDisplay().fontFamily,
-                    fontSize: 42,
-                    color: AppTheme.white,
-                    fontWeight: FontWeight.w700,
-                    height: 1.2,
-                  ),
-                ),
-                const SizedBox(height: 24),
-                // Animated tip
-                SlideTransition(
-                  position: _slideAnim,
-                  child: FadeTransition(
-                    opacity: _fadeAnim,
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Container(
-                          margin: const EdgeInsets.only(top: 6),
-                          width: 8,
-                          height: 8,
-                          decoration: const BoxDecoration(
-                            color: AppTheme.gold,
-                            shape: BoxShape.circle,
-                          ),
-                        ),
-                        const SizedBox(width: 12),
-                        Expanded(
-                          child: Text(
-                            _tips[_tipIndex],
-                            style: TextStyle(
-                              fontFamily: GoogleFonts.nunito().fontFamily,
-                              fontSize: 20,
-                              color: AppTheme.whiteDim,
-                              fontWeight: FontWeight.w500,
-                            ),
-                          ),
-                        ),
-                      ],
+                    SizedBox(height: compactHeight ? 16 : 32),
+                    Text(
+                      'Connect this\ndisplay to your\nbusiness',
+                      style: TextStyle(
+                        fontFamily: GoogleFonts.playfairDisplay().fontFamily,
+                        fontSize: titleSize,
+                        color: AppTheme.white,
+                        fontWeight: FontWeight.w700,
+                        height: 1.12,
+                      ),
                     ),
-                  ),
+                    SizedBox(height: compactHeight ? 14 : 24),
+                    // Animated tip
+                    SlideTransition(
+                      position: _slideAnim,
+                      child: FadeTransition(
+                        opacity: _fadeAnim,
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Container(
+                              margin: const EdgeInsets.only(top: 6),
+                              width: 8,
+                              height: 8,
+                              decoration: const BoxDecoration(
+                                color: AppTheme.gold,
+                                shape: BoxShape.circle,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                _tips[_tipIndex],
+                                style: TextStyle(
+                                  fontFamily: GoogleFonts.nunito().fontFamily,
+                                  fontSize: tipSize,
+                                  color: AppTheme.whiteDim,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    SizedBox(height: compactHeight ? 22 : 40),
+                    // Device code pill
+                    _DeviceCodeBadge(code: widget.deviceCode),
+                    SizedBox(height: compactHeight ? 8 : 12),
+                    _RealtimeStatusBadge(status: widget.realtimeStatus),
+                    SizedBox(height: compactHeight ? 8 : 10),
+                    Flexible(
+                      child: _ConnectionDetails(
+                        configStatus: widget.configStatus,
+                        backendEndpoint: widget.backendEndpoint,
+                        realtimeEndpoint: widget.realtimeEndpoint,
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 40),
-                // Device code pill
-                _DeviceCodeBadge(code: widget.deviceCode),
-                const SizedBox(height: 12),
-                _RealtimeStatusBadge(status: widget.realtimeStatus),
-                const SizedBox(height: 10),
-                _ConnectionDetails(
-                  configStatus: widget.configStatus,
-                  backendEndpoint: widget.backendEndpoint,
-                  realtimeEndpoint: widget.realtimeEndpoint,
-                ),
-              ],
-            ),
-          ),
-        ),
-        // Right: QR code
-        Padding(
-          padding: const EdgeInsets.fromLTRB(40, 60, 80, 160),
-          child: Center(
-            child: ScaleTransition(
-              scale: _pulseAnim,
-              child: QrCodeWidget(
-                data: _qrData(),
-                size: min(size.height * 0.55, 320),
               ),
             ),
-          ),
-        ),
-      ],
+            // Right: QR code
+            Padding(
+              padding: EdgeInsets.fromLTRB(
+                compactHeight ? 24 : 40,
+                verticalPadding,
+                compactHeight ? 48 : 80,
+                verticalPadding,
+              ),
+              child: Center(
+                child: ScaleTransition(
+                  scale: _pulseAnim,
+                  child: QrCodeWidget(
+                    data: _qrData(),
+                    size: qrSize,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        );
+      },
     );
   }
 
@@ -274,7 +297,7 @@ class _QrPairingScreenState extends State<QrPairingScreen>
         ),
         const SizedBox(height: 8),
         Text(
-          'Scan with your MenuBoard app',
+          'Scan with your flexit app',
           style: TextStyle(
             fontFamily: GoogleFonts.nunito().fontFamily,
             fontSize: 16,
@@ -323,7 +346,7 @@ class _QrPairingScreenState extends State<QrPairingScreen>
     // QR payload — your mobile app will read this
     return jsonEncode({
       'deviceCode': widget.deviceCode,
-      'app': 'menuboard',
+      'app': 'flexit',
       'version': 1,
     });
   }

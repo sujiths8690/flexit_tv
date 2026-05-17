@@ -126,6 +126,10 @@ class DisplayConfig {
   final String transitionStyle;
   final double transitionSpeedSeconds;
   final int? autoScrollIntervalSeconds;
+  final bool scheduleEnabled;
+  final bool alwaysOn;
+  final String scheduleStartTime;
+  final String scheduleEndTime;
   final bool showPrice;
   final bool showDescription;
   final bool showLogo;
@@ -151,6 +155,10 @@ class DisplayConfig {
     this.transitionStyle = 'fade',
     this.transitionSpeedSeconds = 0.5,
     this.autoScrollIntervalSeconds,
+    this.scheduleEnabled = false,
+    this.alwaysOn = true,
+    this.scheduleStartTime = '09:00',
+    this.scheduleEndTime = '22:00',
     this.showPrice = true,
     this.showDescription = true,
     this.showLogo = true,
@@ -187,6 +195,10 @@ class DisplayConfig {
       transitionSpeedSeconds:
           (json['transitionSpeedSeconds'] as num?)?.toDouble() ?? 0.5,
       autoScrollIntervalSeconds: json['autoScrollIntervalSeconds'] as int?,
+      scheduleEnabled: json['scheduleEnabled'] as bool? ?? false,
+      alwaysOn: json['alwaysOn'] as bool? ?? true,
+      scheduleStartTime: json['scheduleStartTime'] as String? ?? '09:00',
+      scheduleEndTime: json['scheduleEndTime'] as String? ?? '22:00',
       showPrice: json['showPrice'] as bool? ?? true,
       showDescription: json['showDescription'] as bool? ?? true,
       showLogo: json['showLogo'] as bool? ?? true,
@@ -218,6 +230,10 @@ class DisplayConfig {
         'transitionStyle': transitionStyle,
         'transitionSpeedSeconds': transitionSpeedSeconds,
         'autoScrollIntervalSeconds': autoScrollIntervalSeconds,
+        'scheduleEnabled': scheduleEnabled,
+        'alwaysOn': alwaysOn,
+        'scheduleStartTime': scheduleStartTime,
+        'scheduleEndTime': scheduleEndTime,
         'showPrice': showPrice,
         'showDescription': showDescription,
         'showLogo': showLogo,

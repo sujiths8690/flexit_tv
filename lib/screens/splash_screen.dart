@@ -1,10 +1,8 @@
 // lib/screens/splash_screen.dart
-import 'dart:async';
+import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
-import 'package:google_fonts/google_fonts.dart';
 import '../services/device_service.dart';
-import '../theme/app_theme.dart';
 import 'root_screen.dart';
 
 class SplashScreen extends StatefulWidget {
@@ -16,34 +14,17 @@ class SplashScreen extends StatefulWidget {
 
 class _SplashScreenState extends State<SplashScreen>
     with SingleTickerProviderStateMixin {
-  late AnimationController _ctrl;
-  late Animation<double> _logoScale;
-  late Animation<double> _logoOpacity;
-  late Animation<double> _taglineOpacity;
+  static const _introDuration = Duration(milliseconds: 3800);
+  static const _handoffSettleDelay = Duration(milliseconds: 300);
+
+  late final AnimationController _ctrl;
   final DeviceService _deviceService = DeviceService();
-  Timer? _navigationTimer;
+  bool _hasShownRoot = false;
 
   @override
   void initState() {
     super.initState();
-    _ctrl = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1800),
-    );
-    _logoScale = CurvedAnimation(
-      parent: _ctrl,
-      curve: const Interval(0.0, 0.6, curve: Curves.easeOutBack),
-    );
-    _logoOpacity = CurvedAnimation(
-      parent: _ctrl,
-      curve: const Interval(0.0, 0.5, curve: Curves.easeIn),
-    );
-    _taglineOpacity = CurvedAnimation(
-      parent: _ctrl,
-      curve: const Interval(0.5, 1.0, curve: Curves.easeIn),
-    );
-
-    _ctrl.forward();
+    _ctrl = AnimationController(vsync: this, duration: _introDuration);
     _boot();
   }
 
@@ -52,15 +33,19 @@ class _SplashScreenState extends State<SplashScreen>
       _deviceService.useOfflineStartupFallback();
     });
 
-    _navigationTimer = Timer(const Duration(milliseconds: 1400), _showRoot);
+    _ctrl.forward().whenComplete(() async {
+      await Future<void>.delayed(_handoffSettleDelay);
+      _showRoot();
+    });
   }
 
   void _showRoot() {
-    if (!mounted) return;
+    if (!mounted || _hasShownRoot) return;
+    _hasShownRoot = true;
     Navigator.of(context).pushReplacement(
       PageRouteBuilder(
         pageBuilder: (_, __, ___) => RootScreen(service: _deviceService),
-        transitionDuration: const Duration(milliseconds: 800),
+        transitionDuration: const Duration(milliseconds: 450),
         transitionsBuilder: (_, anim, __, child) =>
             FadeTransition(opacity: anim, child: child),
       ),
@@ -69,7 +54,6 @@ class _SplashScreenState extends State<SplashScreen>
 
   @override
   void dispose() {
-    _navigationTimer?.cancel();
     _ctrl.dispose();
     super.dispose();
   }
@@ -77,130 +61,121 @@ class _SplashScreenState extends State<SplashScreen>
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: AppTheme.background,
-      body: Stack(
-        children: [
-          // Ambient glow
-          Center(
-            child: Container(
-              width: 400,
-              height: 400,
-              decoration: BoxDecoration(
-                shape: BoxShape.circle,
-                gradient: RadialGradient(
-                  colors: [
-                    AppTheme.gold.withOpacity(0.12),
-                    Colors.transparent,
-                  ],
-                ),
-              ),
-            ),
-          ),
-          Center(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Logo mark
-                ScaleTransition(
-                  scale: _logoScale,
-                  child: FadeTransition(
-                    opacity: _logoOpacity,
-                    child: Container(
-                      width: 100,
-                      height: 100,
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(24),
-                        gradient: const LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [AppTheme.gold, AppTheme.goldDim],
-                        ),
-                        boxShadow: [
-                          BoxShadow(
-                            color: AppTheme.gold.withOpacity(0.35),
-                            blurRadius: 40,
-                            spreadRadius: 8,
-                          ),
-                        ],
-                      ),
-                      child: Center(
-                        child: Text(
-                          'M',
-                          style: TextStyle(
-                            fontFamily:
-                                GoogleFonts.playfairDisplay().fontFamily,
-                            fontSize: 52,
-                            fontWeight: FontWeight.w700,
-                            color: AppTheme.background,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 28),
-                FadeTransition(
-                  opacity: _logoOpacity,
-                  child: Text(
-                    'MENUBOARD',
-                    style: TextStyle(
-                      fontFamily: GoogleFonts.nunito().fontFamily,
-                      fontSize: 28,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: 8,
-                      color: AppTheme.white,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 10),
-                FadeTransition(
-                  opacity: _taglineOpacity,
-                  child: Text(
-                    'Premium Digital Menu Experience',
-                    style: TextStyle(
-                      fontFamily: GoogleFonts.nunito().fontFamily,
-                      fontSize: 14,
-                      fontWeight: FontWeight.w400,
-                      letterSpacing: 1.5,
-                      color: AppTheme.gold,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          // Bottom loading bar
-          Positioned(
-            bottom: 48,
-            left: 0,
-            right: 0,
-            child: FadeTransition(
-              opacity: _taglineOpacity,
-              child: Column(
+      backgroundColor: Colors.black,
+      body: RepaintBoundary(
+        child: _LightFlexitIntro(animation: _ctrl),
+      ),
+    );
+  }
+}
+
+class _LightFlexitIntro extends StatelessWidget {
+  final Animation<double> animation;
+  static const _letters = ['f', 'l', 'e', 'x', 'i', 't'];
+
+  const _LightFlexitIntro({required this.animation});
+
+  @override
+  Widget build(BuildContext context) {
+    return AnimatedBuilder(
+      animation: animation,
+      builder: (context, _) {
+        final t = animation.value;
+        final join = Curves.easeInOutCubic.transform(
+          ((t - 0.04) / 0.58).clamp(0.0, 1.0),
+        );
+
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            final size = Size(constraints.maxWidth, constraints.maxHeight);
+            final shortest = size.shortestSide;
+            final fontSize = (shortest * 0.065).clamp(26.0, 42.0);
+            final finalGap = (size.width * 0.03).clamp(20.0, 38.0);
+            final totalWidth = finalGap * (_letters.length - 1);
+            final firstFinalX = (size.width - totalWidth) / 2;
+            final centerY = size.height / 2;
+            final initialXs = <double>[
+              size.width * 0.09,
+              size.width * 0.25,
+              size.width * 0.42,
+              size.width * 0.58,
+              size.width * 0.74,
+              size.width * 0.91,
+            ];
+
+            return ColoredBox(
+              color: Colors.black,
+              child: Stack(
+                fit: StackFit.expand,
                 children: [
-                  const SizedBox(
-                    width: 180,
-                    child: LinearProgressIndicator(
-                      backgroundColor: Color(0xFF2A2A38),
-                      valueColor: AlwaysStoppedAnimation(AppTheme.gold),
-                      minHeight: 2,
+                  for (var i = 0; i < _letters.length; i++)
+                    _IntroLetter(
+                      letter: _letters[i],
+                      x: ui.lerpDouble(
+                        initialXs[i],
+                        firstFinalX + finalGap * i,
+                        join,
+                      )!,
+                      y: centerY,
+                      fontSize: fontSize,
+                      opacity: Curves.easeOut.transform(
+                        ((t - 0.02) / 0.22).clamp(0.0, 1.0),
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 14),
-                  Text(
-                    'Connecting to your business...',
-                    style: TextStyle(
-                      fontFamily: GoogleFonts.nunito().fontFamily,
-                      fontSize: 12,
-                      color: AppTheme.whiteDim,
-                      letterSpacing: 0.5,
-                    ),
-                  ),
                 ],
               ),
-            ),
+            );
+          },
+        );
+      },
+    );
+  }
+}
+
+class _IntroLetter extends StatelessWidget {
+  final String letter;
+  final double x;
+  final double y;
+  final double fontSize;
+  final double opacity;
+
+  const _IntroLetter({
+    required this.letter,
+    required this.x,
+    required this.y,
+    required this.fontSize,
+    required this.opacity,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Positioned(
+      left: x - fontSize * 0.25,
+      top: y - fontSize * 0.58,
+      child: Opacity(
+        opacity: opacity,
+        child: Text(
+          letter,
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            fontSize: fontSize,
+            fontWeight: FontWeight.w300,
+            height: 1,
+            letterSpacing: 0,
+            color: const Color(0xFFE7ECF2),
+            shadows: [
+              Shadow(
+                color: Colors.white.withValues(alpha: 0.26),
+                blurRadius: 8,
+              ),
+              const Shadow(
+                color: Color(0xFF5E6874),
+                offset: Offset(0, 1),
+                blurRadius: 2,
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }

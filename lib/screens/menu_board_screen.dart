@@ -16,12 +16,14 @@ class MenuBoardScreen extends StatefulWidget {
   final DeviceConfig config;
   final DisplayConfig displayConfig;
   final Size screenSize;
+  final Duration initialRevealDelay;
 
   const MenuBoardScreen({
     super.key,
     required this.config,
     required this.displayConfig,
     required this.screenSize,
+    this.initialRevealDelay = Duration.zero,
   });
 
   @override
@@ -33,12 +35,14 @@ class _MenuBoardScreenState extends State<MenuBoardScreen>
   late final AnimationController _fadeCtrl;
   late final Animation<double> _fadeAnim;
   late final AnimationController _bgCtrl;
+  Timer? _revealTimer;
   Timer? _pageTimer;
   List<MenuItem> _items = [];
   List<List<MenuItem>> _categoryGroups = [];
   int _groupIndex = 0;
   int _pageIndex = 0;
   String _contentSignature = '';
+  bool _contentReady = false;
 
   MenuCategory get _category =>
       widget.displayConfig.menuCategory ?? MenuCategory.all;
@@ -78,7 +82,7 @@ class _MenuBoardScreenState extends State<MenuBoardScreen>
     _fadeCtrl = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 900),
-    )..forward();
+    );
     _fadeAnim = CurvedAnimation(parent: _fadeCtrl, curve: Curves.easeOut);
     _bgCtrl = AnimationController(
       vsync: this,
@@ -86,8 +90,11 @@ class _MenuBoardScreenState extends State<MenuBoardScreen>
     )..repeat();
 
     _contentSignature = _buildContentSignature(widget.displayConfig.menuItems);
-    _loadItems();
-    _startPageTimer();
+    if (widget.initialRevealDelay == Duration.zero) {
+      _revealContent();
+    } else {
+      _revealTimer = Timer(widget.initialRevealDelay, _revealContent);
+    }
   }
 
   @override
@@ -117,15 +124,25 @@ class _MenuBoardScreenState extends State<MenuBoardScreen>
             widget.displayConfig.priceFontScale) {
       _contentSignature =
           _buildContentSignature(widget.displayConfig.menuItems);
+      if (!_contentReady) return;
       _fadeCtrl.reset();
       _loadItems();
       _fadeCtrl.forward();
     }
 
     if (oldWidget.displayConfig.autoScrollIntervalSeconds !=
-        widget.displayConfig.autoScrollIntervalSeconds) {
+            widget.displayConfig.autoScrollIntervalSeconds &&
+        _contentReady) {
       _startPageTimer();
     }
+  }
+
+  void _revealContent() {
+    if (!mounted || _contentReady) return;
+    _contentReady = true;
+    _loadItems();
+    _fadeCtrl.forward();
+    _startPageTimer();
   }
 
   String _buildContentSignature(List<MenuItem> items) {
@@ -210,6 +227,7 @@ class _MenuBoardScreenState extends State<MenuBoardScreen>
 
   @override
   void dispose() {
+    _revealTimer?.cancel();
     _fadeCtrl.dispose();
     _bgCtrl.dispose();
     _pageTimer?.cancel();
@@ -243,48 +261,14 @@ class _MenuBoardScreenState extends State<MenuBoardScreen>
               ),
             ),
             Positioned.fill(
-              child: _items.isEmpty
-                  ? _EmptyState(catTheme: catTheme, theme: theme)
-                  : widget.displayConfig.contentMode == 'comboOffers'
-                      ? ComboOfferShowcase(
-                          combos: _items,
-                          pageIndex: _pageIndex,
-                          catTheme: catTheme,
-                          theme: theme,
-                          screenSize: widget.screenSize,
-                          transitionStyle: widget.displayConfig.transitionStyle,
-                          transitionSpeedSeconds:
-                              widget.displayConfig.transitionSpeedSeconds,
-                          headingFontScale:
-                              widget.displayConfig.headingFontScale,
-                          nameFontScale: widget.displayConfig.nameFontScale,
-                          priceFontScale: widget.displayConfig.priceFontScale,
-                          showPrice: widget.displayConfig.showPrice,
-                          showProductImage:
-                              widget.displayConfig.showProductImage,
-                        )
-                      : widget.displayConfig.contentMode == 'todaysStar'
-                          ? _TodaysStarShowcase(
-                              items: _items,
+              child: !_contentReady
+                  ? const SizedBox.shrink()
+                  : _items.isEmpty
+                      ? _EmptyState(catTheme: catTheme, theme: theme)
+                      : widget.displayConfig.contentMode == 'comboOffers'
+                          ? ComboOfferShowcase(
+                              combos: _items,
                               pageIndex: _pageIndex,
-                              screenSize: widget.screenSize,
-                              transitionStyle:
-                                  widget.displayConfig.transitionStyle,
-                              transitionSpeedSeconds:
-                                  widget.displayConfig.transitionSpeedSeconds,
-                              showPrice: widget.displayConfig.showPrice,
-                              showProductImage:
-                                  widget.displayConfig.showProductImage,
-                              headingFontScale:
-                                  widget.displayConfig.headingFontScale,
-                              nameFontScale: widget.displayConfig.nameFontScale,
-                              priceFontScale:
-                                  widget.displayConfig.priceFontScale,
-                            )
-                          : _PagedMenu(
-                              items: _items,
-                              pageIndex: _pageIndex,
-                              groupIndex: _groupIndex,
                               catTheme: catTheme,
                               theme: theme,
                               screenSize: widget.screenSize,
@@ -292,22 +276,62 @@ class _MenuBoardScreenState extends State<MenuBoardScreen>
                                   widget.displayConfig.transitionStyle,
                               transitionSpeedSeconds:
                                   widget.displayConfig.transitionSpeedSeconds,
-                              showPrice: widget.displayConfig.showPrice,
-                              showDescription:
-                                  widget.displayConfig.showDescription,
-                              showProductImage:
-                                  widget.displayConfig.showProductImage,
-                              heading: _sectionHeading,
                               headingFontScale:
                                   widget.displayConfig.headingFontScale,
                               nameFontScale: widget.displayConfig.nameFontScale,
-                              descriptionFontScale:
-                                  widget.displayConfig.descriptionFontScale,
                               priceFontScale:
                                   widget.displayConfig.priceFontScale,
-                            ),
+                              showPrice: widget.displayConfig.showPrice,
+                              showProductImage:
+                                  widget.displayConfig.showProductImage,
+                            )
+                          : widget.displayConfig.contentMode == 'todaysStar'
+                              ? _TodaysStarShowcase(
+                                  items: _items,
+                                  pageIndex: _pageIndex,
+                                  screenSize: widget.screenSize,
+                                  transitionStyle:
+                                      widget.displayConfig.transitionStyle,
+                                  transitionSpeedSeconds: widget
+                                      .displayConfig.transitionSpeedSeconds,
+                                  showPrice: widget.displayConfig.showPrice,
+                                  showProductImage:
+                                      widget.displayConfig.showProductImage,
+                                  headingFontScale:
+                                      widget.displayConfig.headingFontScale,
+                                  nameFontScale:
+                                      widget.displayConfig.nameFontScale,
+                                  priceFontScale:
+                                      widget.displayConfig.priceFontScale,
+                                )
+                              : _PagedMenu(
+                                  items: _items,
+                                  pageIndex: _pageIndex,
+                                  groupIndex: _groupIndex,
+                                  catTheme: catTheme,
+                                  theme: theme,
+                                  screenSize: widget.screenSize,
+                                  transitionStyle:
+                                      widget.displayConfig.transitionStyle,
+                                  transitionSpeedSeconds: widget
+                                      .displayConfig.transitionSpeedSeconds,
+                                  showPrice: widget.displayConfig.showPrice,
+                                  showDescription:
+                                      widget.displayConfig.showDescription,
+                                  showProductImage:
+                                      widget.displayConfig.showProductImage,
+                                  heading: _sectionHeading,
+                                  headingFontScale:
+                                      widget.displayConfig.headingFontScale,
+                                  nameFontScale:
+                                      widget.displayConfig.nameFontScale,
+                                  descriptionFontScale:
+                                      widget.displayConfig.descriptionFontScale,
+                                  priceFontScale:
+                                      widget.displayConfig.priceFontScale,
+                                ),
             ),
-            if (_shouldShowBrandMark)
+            if (_contentReady && _shouldShowBrandMark)
               BusinessBrandMark(
                 businessName: widget.displayConfig.showCompanyName
                     ? widget.config.businessName

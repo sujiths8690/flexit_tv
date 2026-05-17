@@ -7,14 +7,14 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
 
-import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
 import '../models/models.dart';
 
-class DeviceService extends ChangeNotifier {
+class DeviceService extends ChangeNotifier with WidgetsBindingObserver {
   static const String _baseUrl = 'http://192.168.29.184:4000';
   static const String _wsUrl = 'ws://192.168.29.184:4000/realtime-ws';
   static const Duration _requestTimeout = Duration(seconds: 3);
@@ -31,8 +31,10 @@ class DeviceService extends ChangeNotifier {
   StreamSubscription? _socketSubscription;
   Timer? _reconnectTimer;
   Timer? _pingTimer;
+  int _socketGeneration = 0;
   String _realtimeStatus = 'connecting';
   bool _disposed = false;
+  bool _isObservingLifecycle = false;
 
   String get deviceCode => _deviceCode;
   DeviceConfig? get config => _config;
@@ -45,6 +47,8 @@ class DeviceService extends ChangeNotifier {
   String get realtimeEndpoint => _wsUrl;
 
   Future<void> initialize() async {
+    _ensureLifecycleObserver();
+
     try {
       _deviceCode = await _loadOrCreateDeviceCode();
       _config = _unpairedConfig();
@@ -64,6 +68,12 @@ class DeviceService extends ChangeNotifier {
       notifyListeners();
       _connectRealtime();
     }
+  }
+
+  void _ensureLifecycleObserver() {
+    if (_isObservingLifecycle) return;
+    WidgetsBinding.instance.addObserver(this);
+    _isObservingLifecycle = true;
   }
 
   bool get _isDeviceCodeReady {
@@ -129,6 +139,8 @@ class DeviceService extends ChangeNotifier {
   }
 
   void _connectRealtime() {
+    if (_disposed) return;
+    final generation = ++_socketGeneration;
     _reconnectTimer?.cancel();
     _pingTimer?.cancel();
     _socketSubscription?.cancel();
@@ -145,7 +157,7 @@ class DeviceService extends ChangeNotifier {
 
     final socket = WebSocketChannel.connect(uri);
     socket.ready.timeout(_requestTimeout).then((_) {
-      if (_disposed) {
+      if (_disposed || generation != _socketGeneration) {
         socket.sink.close();
         return;
       }
@@ -159,15 +171,22 @@ class DeviceService extends ChangeNotifier {
       _socketSubscription = socket.stream.listen(
         _handleRealtimeMessage,
         onDone: () {
-          if (_socket == socket) _scheduleReconnect();
+          if (_socket == socket && generation == _socketGeneration) {
+            _scheduleReconnect();
+          }
         },
         onError: (_) {
-          if (_socket == socket) _scheduleReconnect();
+          if (_socket == socket && generation == _socketGeneration) {
+            _scheduleReconnect();
+          }
         },
         cancelOnError: true,
       );
     }).catchError((_) {
-      _scheduleReconnect();
+      socket.sink.close();
+      if (!_disposed && generation == _socketGeneration) {
+        _scheduleReconnect();
+      }
     });
   }
 
@@ -196,6 +215,39 @@ class DeviceService extends ChangeNotifier {
       if (_disposed) return;
       if (!_disposed) _connectRealtime();
     });
+  }
+
+  void _disconnectRealtime({bool notify = true}) {
+    _reconnectTimer?.cancel();
+    _pingTimer?.cancel();
+    _socketSubscription?.cancel();
+    try {
+      _socket?.sink.add(jsonEncode({'type': 'DEVICE_DISCONNECT'}));
+    } catch (_) {}
+    _socket?.sink.close();
+    _socket = null;
+    _socketSubscription = null;
+    _realtimeStatus = 'disconnected';
+    if (notify) notifyListeners();
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (_disposed) return;
+
+    if (state == AppLifecycleState.resumed) {
+      _connectRealtime();
+      _fetchConfig();
+      return;
+    }
+
+    if (state == AppLifecycleState.inactive ||
+        state == AppLifecycleState.hidden ||
+        state == AppLifecycleState.paused ||
+        state == AppLifecycleState.detached) {
+      _socketGeneration++;
+      _disconnectRealtime();
+    }
   }
 
   void _handleRealtimeMessage(dynamic raw) {
@@ -266,10 +318,15 @@ class DeviceService extends ChangeNotifier {
   @override
   void dispose() {
     _disposed = true;
+    if (_isObservingLifecycle) {
+      WidgetsBinding.instance.removeObserver(this);
+      _isObservingLifecycle = false;
+    }
+    _socketGeneration++;
     _reconnectTimer?.cancel();
     _pingTimer?.cancel();
     _socketSubscription?.cancel();
-    _socket?.sink.close();
+    _disconnectRealtime(notify: false);
     super.dispose();
   }
 

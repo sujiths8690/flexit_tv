@@ -111,6 +111,7 @@ class _MediaScreenState extends State<MediaScreen> {
           );
     final url = _absoluteUrl(current.url);
     final type = current.type.toLowerCase();
+    final shouldPlayVideo = type == 'video' && _isPlayableVideoUrl(url);
     return Scaffold(
       backgroundColor: Colors.black,
       body: AnimatedSwitcher(
@@ -130,6 +131,8 @@ class _MediaScreenState extends State<MediaScreen> {
                 height: double.infinity,
                 errorBuilder: (_, __, ___) => const _MediaError(),
               )
+            else if (!shouldPlayVideo)
+              const _MediaError()
             else
               // Video support — uncomment after adding video_player to pubspec.yaml
               // VideoPlayerWidget(url: widget.mediaUrl),
@@ -182,6 +185,15 @@ class _MediaScreenState extends State<MediaScreen> {
     if (url.startsWith('http')) return url;
     final path = url.startsWith('/') ? url.substring(1) : url;
     return 'http://192.168.29.184:4002/$path';
+  }
+
+  bool _isPlayableVideoUrl(String url) {
+    final uri = Uri.tryParse(url);
+    final path = (uri?.path ?? url).toLowerCase();
+    return path.endsWith('.mp4') ||
+        path.endsWith('.m4v') ||
+        path.endsWith('.mov') ||
+        path.endsWith('.m3u8');
   }
 }
 
