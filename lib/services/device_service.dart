@@ -8,7 +8,6 @@ import 'dart:convert';
 import 'dart:math';
 
 import 'package:flutter/widgets.dart';
-import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
@@ -18,7 +17,7 @@ class DeviceService extends ChangeNotifier with WidgetsBindingObserver {
   static const String _baseUrl = 'http://192.168.29.184:4000';
   static const String _wsUrl = 'ws://192.168.29.184:4000/realtime-ws';
   static const String _menuConfigCachePrefix = 'cached_menu_config_';
-  static const Duration _requestTimeout = Duration(seconds: 3);
+  static const Duration _socketReadyTimeout = Duration(seconds: 3);
   static const Duration _reconnectDelay = Duration(seconds: 5);
   static const Duration _pingInterval = Duration(seconds: 20);
 
@@ -27,7 +26,7 @@ class DeviceService extends ChangeNotifier with WidgetsBindingObserver {
   bool _hasEverPaired = false;
   bool _isLoading = true;
   String? _error;
-  String _configStatus = 'config not loaded';
+  String _configStatus = 'waiting for websocket config';
   WebSocketChannel? _socket;
   StreamSubscription? _socketSubscription;
   Timer? _reconnectTimer;
@@ -60,9 +59,6 @@ class DeviceService extends ChangeNotifier with WidgetsBindingObserver {
       _error = null;
       notifyListeners();
 
-      if (_config?.isPaired != true || _config?.displayConfig == null) {
-        await _fetchConfig();
-      }
       _connectRealtime();
     } catch (_) {
       if (!_isDeviceCodeReady) {
@@ -109,42 +105,6 @@ class DeviceService extends ChangeNotifier with WidgetsBindingObserver {
     return List.generate(12, (_) => chars[rand.nextInt(chars.length)]).join();
   }
 
-  Future<void> _fetchConfig() async {
-    try {
-      final response = await http.get(
-        Uri.parse('$_baseUrl/api/content/device/$_deviceCode/config'),
-        headers: {'Content-Type': 'application/json'},
-      ).timeout(_requestTimeout);
-
-      _configStatus = 'config ${response.statusCode}';
-
-      if (response.statusCode == 200) {
-        final body = jsonDecode(response.body) as Map<String, dynamic>;
-        final data = body['data'];
-        if (data is Map<String, dynamic>) {
-          _config = DeviceConfig.fromJson(data);
-          if (_config?.isPaired == true) {
-            _hasEverPaired = true;
-            await _saveMenuConfigCache(_config);
-          }
-        } else {
-          _config = await _offlinePairedConfig();
-        }
-      } else {
-        _config = await _offlinePairedConfig();
-      }
-
-      _isLoading = false;
-      _error = null;
-    } catch (_) {
-      _configStatus = 'config unavailable';
-      _config = await _offlinePairedConfig();
-      _isLoading = false;
-      _error = null;
-    }
-    notifyListeners();
-  }
-
   void _connectRealtime() {
     if (_disposed) return;
     final generation = ++_socketGeneration;
@@ -163,7 +123,7 @@ class DeviceService extends ChangeNotifier with WidgetsBindingObserver {
     );
 
     final socket = WebSocketChannel.connect(uri);
-    socket.ready.timeout(_requestTimeout).then((_) {
+    socket.ready.timeout(_socketReadyTimeout).then((_) {
       if (_disposed || generation != _socketGeneration) {
         socket.sink.close();
         return;
@@ -172,8 +132,10 @@ class DeviceService extends ChangeNotifier with WidgetsBindingObserver {
       _socket = socket;
       _error = null;
       _realtimeStatus = 'connected ${Uri.parse(_wsUrl).port}';
+      _configStatus = 'requesting websocket config';
       notifyListeners();
       _startPing();
+      _requestConfigOverRealtime();
 
       _socketSubscription = socket.stream.listen(
         _handleRealtimeMessage,
@@ -205,6 +167,18 @@ class DeviceService extends ChangeNotifier with WidgetsBindingObserver {
         socket.sink.add(jsonEncode({'type': 'PING'}));
       }
     });
+  }
+
+  void _requestConfigOverRealtime() {
+    final socket = _socket;
+    if (socket == null) return;
+
+    try {
+      socket.sink.add(jsonEncode({
+        'type': 'DEVICE_CONFIG_REQUEST',
+        'data': {'deviceCode': _deviceCode},
+      }));
+    } catch (_) {}
   }
 
   void _scheduleReconnect() {
@@ -262,12 +236,20 @@ class DeviceService extends ChangeNotifier with WidgetsBindingObserver {
       final type = message['type']?.toString();
       final data = message['data'];
 
-      if (type == 'PONG' || type == 'DEVICE_WS_CONNECTED') return;
+      if (type == 'PONG') return;
+
+      if (type == 'DEVICE_WS_CONNECTED') {
+        _configStatus = 'websocket connected';
+        _requestConfigOverRealtime();
+        notifyListeners();
+        return;
+      }
 
       if (type == 'DEVICE_DELETED') {
         _config = _unpairedConfig();
         _hasEverPaired = false;
         _clearMenuConfigCache();
+        _configStatus = 'device deleted';
         _isLoading = false;
         _error = null;
         notifyListeners();
@@ -301,6 +283,7 @@ class DeviceService extends ChangeNotifier with WidgetsBindingObserver {
           }
         }
 
+        _configStatus = 'config via websocket';
         _isLoading = false;
         _error = null;
         notifyListeners();
@@ -312,6 +295,7 @@ class DeviceService extends ChangeNotifier with WidgetsBindingObserver {
 
   Future<void> refresh() async {
     _connectRealtime();
+    _requestConfigOverRealtime();
   }
 
   Future<void> useOfflineStartupFallback() async {
@@ -347,23 +331,6 @@ class DeviceService extends ChangeNotifier with WidgetsBindingObserver {
       deviceCode: _deviceCode,
       isPaired: false,
       orientation: DisplayOrientation.normal,
-    );
-  }
-
-  Future<DeviceConfig> _offlinePairedConfig() async {
-    if (!_hasEverPaired) return _unpairedConfig();
-    final cached = await _loadCachedMenuConfig();
-    if (cached != null) return cached;
-
-    return DeviceConfig(
-      deviceCode: _deviceCode,
-      isPaired: true,
-      businessName: _config?.businessName,
-      businessLogoUrl: _config?.businessLogoUrl,
-      orientation: _config?.orientation ?? DisplayOrientation.normal,
-      menuTheme: _config?.menuTheme,
-      themeColor: _config?.themeColor ?? 'gold',
-      displayConfig: null,
     );
   }
 

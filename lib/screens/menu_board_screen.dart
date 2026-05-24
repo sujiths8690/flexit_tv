@@ -12,6 +12,8 @@ import '../theme/app_theme.dart';
 import '../widgets/business_brand_mark.dart';
 import '../widgets/combo_offer_showcase.dart';
 import '../widgets/menu_item_row.dart';
+import '../widgets/notice_showcase.dart';
+import '../widgets/offer_showcase.dart';
 
 List<String> _contentModesFrom(String value) {
   final modes = value
@@ -20,7 +22,7 @@ List<String> _contentModesFrom(String value) {
       .where((mode) => mode.isNotEmpty)
       .toList();
   if (modes.isEmpty || modes.contains('allCategories')) {
-    return const ['category', 'comboOffers', 'todaysStar'];
+    return const ['category', 'comboOffers', 'offers', 'notices', 'todaysStar'];
   }
   return modes;
 }
@@ -28,10 +30,12 @@ List<String> _contentModesFrom(String value) {
 class _ContentSection {
   final String mode;
   final List<List<MenuItem>> groups;
+  final List<NoticeItem> notices;
 
   const _ContentSection({
     required this.mode,
     required this.groups,
+    this.notices = const [],
   });
 }
 
@@ -76,26 +80,35 @@ class _MenuBoardScreenState extends State<MenuBoardScreen>
   String get _activeContentMode => _sections.isNotEmpty
       ? _sections[_sectionIndex].mode
       : _contentModesFrom(widget.displayConfig.contentMode).first;
+  List<NoticeItem> get _activeNotices =>
+      _sections.isNotEmpty ? _sections[_sectionIndex].notices : const [];
   String get _sectionHeading {
+    final language = widget.displayConfig.displayLanguage;
     switch (_activeContentMode) {
       case 'veg':
-        return 'Veg';
+        return _localizedMenuText(language, 'veg');
       case 'nonVeg':
-        return 'Non Veg';
+        return _localizedMenuText(language, 'nonVeg');
       case 'comboOffers':
-        return 'Combo Offer';
+        return _localizedMenuText(language, 'comboOffer');
+      case 'offers':
+        return _localizedMenuText(language, 'offers');
+      case 'notices':
+        return _localizedMenuText(language, 'notices');
       case 'todaysStar':
-        return "Today's Star";
+        return _localizedMenuText(language, 'todaysStar');
       case 'category':
         return _items.isNotEmpty
-            ? (_items.first.categoryName ?? 'Menu')
-            : 'Menu';
+            ? (_items.first.categoryName ??
+                _localizedMenuText(language, 'menu'))
+            : _localizedMenuText(language, 'menu');
       case 'allCategories':
         return _items.isNotEmpty
-            ? (_items.first.categoryName ?? 'Full Menu')
-            : 'Full Menu';
+            ? (_items.first.categoryName ??
+                _localizedMenuText(language, 'fullMenu'))
+            : _localizedMenuText(language, 'fullMenu');
       default:
-        return 'Menu';
+        return _localizedMenuText(language, 'menu');
     }
   }
 
@@ -123,7 +136,10 @@ class _MenuBoardScreenState extends State<MenuBoardScreen>
       duration: const Duration(seconds: 24),
     )..repeat();
 
-    _contentSignature = _buildContentSignature(widget.displayConfig.menuItems);
+    _contentSignature = _buildContentSignature(
+      widget.displayConfig.menuItems,
+      widget.displayConfig.notices,
+    );
     if (widget.initialRevealDelay == Duration.zero) {
       _revealContent();
     } else {
@@ -139,7 +155,10 @@ class _MenuBoardScreenState extends State<MenuBoardScreen>
         oldWidget.displayConfig.themeOverride !=
             widget.displayConfig.themeOverride ||
         _contentSignature !=
-            _buildContentSignature(widget.displayConfig.menuItems) ||
+            _buildContentSignature(
+              widget.displayConfig.menuItems,
+              widget.displayConfig.notices,
+            ) ||
         oldWidget.displayConfig.contentMode !=
             widget.displayConfig.contentMode ||
         oldWidget.config.menuTheme != widget.config.menuTheme ||
@@ -150,6 +169,8 @@ class _MenuBoardScreenState extends State<MenuBoardScreen>
             widget.displayConfig.showProductImage ||
         oldWidget.displayConfig.showDietTags !=
             widget.displayConfig.showDietTags ||
+        oldWidget.displayConfig.showComboItemQuantity !=
+            widget.displayConfig.showComboItemQuantity ||
         oldWidget.displayConfig.headingFontScale !=
             widget.displayConfig.headingFontScale ||
         oldWidget.displayConfig.nameFontScale !=
@@ -158,8 +179,10 @@ class _MenuBoardScreenState extends State<MenuBoardScreen>
             widget.displayConfig.descriptionFontScale ||
         oldWidget.displayConfig.priceFontScale !=
             widget.displayConfig.priceFontScale) {
-      _contentSignature =
-          _buildContentSignature(widget.displayConfig.menuItems);
+      _contentSignature = _buildContentSignature(
+        widget.displayConfig.menuItems,
+        widget.displayConfig.notices,
+      );
       if (!_contentReady) return;
       _fadeCtrl.reset();
       _loadItems();
@@ -181,13 +204,19 @@ class _MenuBoardScreenState extends State<MenuBoardScreen>
     _startPageTimer();
   }
 
-  String _buildContentSignature(List<MenuItem> items) {
-    return items
+  String _buildContentSignature(
+      List<MenuItem> items, List<NoticeItem> notices) {
+    final itemSignature = items
         .map(
           (item) =>
-              '${item.id}:${item.name}:${item.price}:${item.originalPrice ?? ''}:${item.isAvailable}:${item.tags.join(',')}:${item.priceVariants.map((variant) => '${variant.label}-${variant.price}').join(',')}:${item.imageUrl ?? ''}:${item.categoryId ?? ''}:${item.categoryName ?? ''}:${item.comboItems.map((comboItem) => '${comboItem.product.id}-${comboItem.product.name}-${comboItem.product.price}-${comboItem.product.isAvailable}-${comboItem.quantity}-${comboItem.product.imageUrl ?? ''}').join(',')}',
+              '${item.id}:${item.name}:${item.price}:${item.originalPrice ?? ''}:${item.isAvailable}:${item.tags.join(',')}:${item.priceVariants.map((variant) => '${variant.label}-${variant.price}').join(',')}:${item.imageUrl ?? ''}:${item.categoryId ?? ''}:${item.categoryName ?? ''}:${item.comboItems.map((comboItem) => '${comboItem.product.id}-${comboItem.product.name}-${comboItem.product.price}-${comboItem.product.isAvailable}-${comboItem.quantity}-${comboItem.variantLabel ?? ''}-${comboItem.variantPrice ?? ''}-${comboItem.product.imageUrl ?? ''}').join(',')}',
         )
         .join('|');
+    final noticeSignature = notices
+        .map((notice) =>
+            '${notice.id}:${notice.content}:${notice.createdAt?.toIso8601String() ?? ''}')
+        .join('|');
+    return '$itemSignature::$noticeSignature';
   }
 
   void _loadItems() {
@@ -195,30 +224,49 @@ class _MenuBoardScreenState extends State<MenuBoardScreen>
     final modes = _contentModesFrom(widget.displayConfig.contentMode)
         .where((mode) => mode != 'allMedia' && mode != 'media')
         .toList();
+    final effectiveModes = modes.isEmpty ? ['allCategories'] : modes;
     setState(() {
       _pageIndex = 0;
       _groupIndex = 0;
       _sectionIndex = 0;
       _sections = _buildContentSections(
         all,
-        modes.isEmpty ? ['allCategories'] : modes,
+        widget.displayConfig.notices,
+        effectiveModes,
       );
       _categoryGroups = _sections.isNotEmpty
           ? _sections.first.groups
-          : _buildCategoryGroups(
-              all,
-              'allCategories',
-            );
+          : effectiveModes.length == 1 && effectiveModes.first == 'notices'
+              ? const []
+              : _buildCategoryGroups(
+                  all,
+                  'allCategories',
+                );
       _items = _categoryGroups.isNotEmpty ? _categoryGroups.first : all;
     });
   }
 
   List<_ContentSection> _buildContentSections(
     List<MenuItem> all,
+    List<NoticeItem> notices,
     List<String> modes,
   ) {
     final sections = <_ContentSection>[];
     for (final mode in modes) {
+      if (mode == 'notices') {
+        final activeNotices = notices
+            .where((notice) => notice.content.trim().isNotEmpty)
+            .toList();
+        if (activeNotices.isEmpty) continue;
+        sections.add(
+          _ContentSection(
+            mode: mode,
+            groups: const [[]],
+            notices: activeNotices,
+          ),
+        );
+        continue;
+      }
       final sectionItems = switch (mode) {
         'veg' => all.where(
             (item) => item.tags.contains('veg') && item.comboItems.isEmpty,
@@ -226,7 +274,11 @@ class _MenuBoardScreenState extends State<MenuBoardScreen>
         'nonVeg' => all.where(
             (item) => item.tags.contains('nonVeg') && item.comboItems.isEmpty,
           ),
-        'comboOffers' => all.where((item) => item.comboItems.isNotEmpty),
+        'comboOffers' => all.where(
+            (item) =>
+                item.comboItems.isNotEmpty && item.categoryName != 'Offers',
+          ),
+        'offers' => all.where((item) => item.categoryName == 'Offers'),
         'todaysStar' => all.where(
             (item) =>
                 item.isFeatured &&
@@ -282,12 +334,29 @@ class _MenuBoardScreenState extends State<MenuBoardScreen>
     final interval = widget.displayConfig.autoScrollIntervalSeconds ?? 8;
     _pageTimer?.cancel();
     _pageTimer = Timer.periodic(Duration(seconds: interval), (_) {
-      if (!mounted || _items.isEmpty) return;
-      if (_activeContentMode == 'comboOffers') {
-        final offersPerPage = ComboOfferShowcase.offersPerPageFor(
-          widget.screenSize,
-        );
-        final pageCount = (_items.length / offersPerPage).ceil();
+      if (!mounted) return;
+      if (_activeContentMode == 'notices') {
+        if (_activeNotices.length <= 1) {
+          _advanceSection();
+          return;
+        }
+        setState(() {
+          if (_pageIndex + 1 < _activeNotices.length) {
+            _pageIndex++;
+          } else {
+            _setNextSection();
+          }
+        });
+        return;
+      }
+      if (_items.isEmpty) return;
+      if (_activeContentMode == 'comboOffers' ||
+          _activeContentMode == 'offers') {
+        final pageCount = _activeContentMode == 'offers'
+            ? OfferShowcase.pageCountFor(_items, widget.screenSize)
+            : (_items.length /
+                    ComboOfferShowcase.offersPerPageFor(widget.screenSize))
+                .ceil();
         if (pageCount <= 1) {
           _advanceSection();
           return;
@@ -403,51 +472,25 @@ class _MenuBoardScreenState extends State<MenuBoardScreen>
             Positioned.fill(
               child: !_contentReady
                   ? const SizedBox.shrink()
-                  : _items.isEmpty
-                      ? _EmptyState(catTheme: catTheme, theme: theme)
-                      : _activeContentMode == 'comboOffers'
-                          ? ComboOfferShowcase(
-                              combos: _items,
-                              pageIndex: _pageIndex,
+                  : _activeContentMode == 'notices'
+                      ? NoticeShowcase(
+                          notices: _activeNotices,
+                          pageIndex: _pageIndex,
+                          screenSize: widget.screenSize,
+                          transitionSpeedSeconds:
+                              widget.displayConfig.transitionSpeedSeconds,
+                        )
+                      : _items.isEmpty
+                          ? _EmptyState(
                               catTheme: catTheme,
                               theme: theme,
-                              screenSize: widget.screenSize,
-                              transitionStyle:
-                                  widget.displayConfig.transitionStyle,
-                              transitionSpeedSeconds:
-                                  widget.displayConfig.transitionSpeedSeconds,
-                              headingFontScale:
-                                  widget.displayConfig.headingFontScale,
-                              nameFontScale: widget.displayConfig.nameFontScale,
-                              priceFontScale:
-                                  widget.displayConfig.priceFontScale,
-                              showPrice: widget.displayConfig.showPrice,
-                              showProductImage:
-                                  widget.displayConfig.showProductImage,
+                              displayLanguage:
+                                  widget.displayConfig.displayLanguage,
                             )
-                          : _activeContentMode == 'todaysStar'
-                              ? _TodaysStarShowcase(
-                                  items: _items,
+                          : _activeContentMode == 'comboOffers'
+                              ? ComboOfferShowcase(
+                                  combos: _items,
                                   pageIndex: _pageIndex,
-                                  screenSize: widget.screenSize,
-                                  transitionStyle:
-                                      widget.displayConfig.transitionStyle,
-                                  transitionSpeedSeconds: widget
-                                      .displayConfig.transitionSpeedSeconds,
-                                  showPrice: widget.displayConfig.showPrice,
-                                  showProductImage:
-                                      widget.displayConfig.showProductImage,
-                                  headingFontScale:
-                                      widget.displayConfig.headingFontScale,
-                                  nameFontScale:
-                                      widget.displayConfig.nameFontScale,
-                                  priceFontScale:
-                                      widget.displayConfig.priceFontScale,
-                                )
-                              : _PagedMenu(
-                                  items: _items,
-                                  pageIndex: _pageIndex,
-                                  groupIndex: _groupIndex,
                                   catTheme: catTheme,
                                   theme: theme,
                                   screenSize: widget.screenSize,
@@ -455,24 +498,108 @@ class _MenuBoardScreenState extends State<MenuBoardScreen>
                                       widget.displayConfig.transitionStyle,
                                   transitionSpeedSeconds: widget
                                       .displayConfig.transitionSpeedSeconds,
-                                  showPrice: widget.displayConfig.showPrice,
-                                  showDescription:
-                                      widget.displayConfig.showDescription,
-                                  showProductImage:
-                                      widget.displayConfig.showProductImage,
-                                  showDietTags:
-                                      widget.displayConfig.showDietTags,
-                                  heading: _sectionHeading,
-                                  sectionMode: _activeContentMode,
                                   headingFontScale:
                                       widget.displayConfig.headingFontScale,
                                   nameFontScale:
                                       widget.displayConfig.nameFontScale,
-                                  descriptionFontScale:
-                                      widget.displayConfig.descriptionFontScale,
                                   priceFontScale:
                                       widget.displayConfig.priceFontScale,
-                                ),
+                                  showPrice: widget.displayConfig.showPrice,
+                                  showProductImage:
+                                      widget.displayConfig.showProductImage,
+                                  showComboItemQuantity: widget
+                                      .displayConfig.showComboItemQuantity,
+                                  displayLanguage:
+                                      widget.displayConfig.displayLanguage,
+                                  businessName: widget.config.businessName,
+                                  businessLogoUrl: widget.displayConfig.showLogo
+                                      ? widget.config.businessLogoUrl
+                                      : null,
+                                )
+                              : _activeContentMode == 'offers'
+                                  ? OfferShowcase(
+                                      offers: _items,
+                                      pageIndex: _pageIndex,
+                                      theme: theme,
+                                      screenSize: widget.screenSize,
+                                      transitionStyle:
+                                          widget.displayConfig.transitionStyle,
+                                      transitionSpeedSeconds: widget
+                                          .displayConfig.transitionSpeedSeconds,
+                                      headingFontScale:
+                                          widget.displayConfig.headingFontScale,
+                                      nameFontScale:
+                                          widget.displayConfig.nameFontScale,
+                                      priceFontScale:
+                                          widget.displayConfig.priceFontScale,
+                                      showPrice: widget.displayConfig.showPrice,
+                                      showProductImage:
+                                          widget.displayConfig.showProductImage,
+                                      displayLanguage:
+                                          widget.displayConfig.displayLanguage,
+                                      businessName: widget.config.businessName,
+                                      businessLogoUrl:
+                                          widget.displayConfig.showLogo
+                                              ? widget.config.businessLogoUrl
+                                              : null,
+                                    )
+                                  : _activeContentMode == 'todaysStar'
+                                      ? _TodaysStarShowcase(
+                                          items: _items,
+                                          pageIndex: _pageIndex,
+                                          screenSize: widget.screenSize,
+                                          transitionStyle: widget
+                                              .displayConfig.transitionStyle,
+                                          transitionSpeedSeconds: widget
+                                              .displayConfig
+                                              .transitionSpeedSeconds,
+                                          showPrice:
+                                              widget.displayConfig.showPrice,
+                                          showProductImage: widget
+                                              .displayConfig.showProductImage,
+                                          headingFontScale: widget
+                                              .displayConfig.headingFontScale,
+                                          nameFontScale: widget
+                                              .displayConfig.nameFontScale,
+                                          priceFontScale: widget
+                                              .displayConfig.priceFontScale,
+                                          displayLanguage: widget
+                                              .displayConfig.displayLanguage,
+                                        )
+                                      : _PagedMenu(
+                                          items: _items,
+                                          pageIndex: _pageIndex,
+                                          groupIndex: _groupIndex,
+                                          catTheme: catTheme,
+                                          theme: theme,
+                                          screenSize: widget.screenSize,
+                                          transitionStyle: widget
+                                              .displayConfig.transitionStyle,
+                                          transitionSpeedSeconds: widget
+                                              .displayConfig
+                                              .transitionSpeedSeconds,
+                                          showPrice:
+                                              widget.displayConfig.showPrice,
+                                          showDescription: widget
+                                              .displayConfig.showDescription,
+                                          showProductImage: widget
+                                              .displayConfig.showProductImage,
+                                          showDietTags:
+                                              widget.displayConfig.showDietTags,
+                                          heading: _sectionHeading,
+                                          sectionMode: _activeContentMode,
+                                          displayLanguage: widget
+                                              .displayConfig.displayLanguage,
+                                          headingFontScale: widget
+                                              .displayConfig.headingFontScale,
+                                          nameFontScale: widget
+                                              .displayConfig.nameFontScale,
+                                          descriptionFontScale: widget
+                                              .displayConfig
+                                              .descriptionFontScale,
+                                          priceFontScale: widget
+                                              .displayConfig.priceFontScale,
+                                        ),
             ),
             if (_contentReady && _shouldShowBrandMark)
               BusinessBrandMark(
@@ -491,6 +618,8 @@ class _MenuBoardScreenState extends State<MenuBoardScreen>
   }
 
   bool get _shouldShowBrandMark {
+    if (_activeContentMode == 'comboOffers') return false;
+    if (_activeContentMode == 'notices') return false;
     final hasVisibleName = widget.displayConfig.showCompanyName &&
         (widget.config.businessName?.trim().isNotEmpty ?? false);
     final hasVisibleLogo = widget.displayConfig.showLogo &&
@@ -513,6 +642,38 @@ class _MenuBoardScreenState extends State<MenuBoardScreen>
   }
 }
 
+bool _isMalayalam(String language) => language.toLowerCase() == 'malayalam';
+
+String _localizedMenuText(String language, String key) {
+  if (_isMalayalam(language)) {
+    return switch (key) {
+      'veg' => 'വെജ്',
+      'nonVeg' => 'നോൺ വെജ്',
+      'comboOffer' => 'കോംബോ ഓഫർ',
+      'offers' => 'ഓഫറുകൾ',
+      'todaysStar' => 'ഇന്നത്തെ താരം',
+      'menu' => 'മെനു',
+      'fullMenu' => 'മുഴുവൻ മെനു',
+      'addItems' => 'ആപ്പിൽ നിന്ന് ഇനങ്ങൾ ചേർക്കുക',
+      'newProducts' => 'പുതിയ ഉൽപ്പന്നങ്ങളും മീഡിയയും ഇവിടെ കാണിക്കും.',
+      _ => key,
+    };
+  }
+  return switch (key) {
+    'veg' => 'Veg',
+    'nonVeg' => 'Non Veg',
+    'comboOffer' => 'Combo Offer',
+    'offers' => 'Offers',
+    'notices' => 'Notices',
+    'todaysStar' => "Today's Star",
+    'menu' => 'Menu',
+    'fullMenu' => 'Full Menu',
+    'addItems' => 'Add items from the app',
+    'newProducts' => 'New products and media will appear here automatically.',
+    _ => key,
+  };
+}
+
 class _TodaysStarShowcase extends StatelessWidget {
   final List<MenuItem> items;
   final int pageIndex;
@@ -524,6 +685,7 @@ class _TodaysStarShowcase extends StatelessWidget {
   final double headingFontScale;
   final double nameFontScale;
   final double priceFontScale;
+  final String displayLanguage;
 
   const _TodaysStarShowcase({
     required this.items,
@@ -536,6 +698,7 @@ class _TodaysStarShowcase extends StatelessWidget {
     required this.headingFontScale,
     required this.nameFontScale,
     required this.priceFontScale,
+    required this.displayLanguage,
   });
 
   int get _itemsPerPage => 1;
@@ -552,115 +715,107 @@ class _TodaysStarShowcase extends StatelessWidget {
       8,
       (value, item) => max(value, item.name.length),
     );
-    final nameSize = ((screenSize.width * 0.054) * nameFontScale)
-        .clamp(36.0, longestName > 20 ? 78.0 : 96.0);
+    final nameSize = ((screenSize.width * 0.040) * nameFontScale)
+        .clamp(28.0, longestName > 20 ? 58.0 : 72.0);
     final priceSize =
-        ((screenSize.width * 0.034) * priceFontScale).clamp(26.0, 60.0);
+        ((screenSize.width * 0.032) * priceFontScale).clamp(24.0, 54.0);
 
-    return AnimatedSwitcher(
-      duration: Duration(milliseconds: (transitionSpeedSeconds * 1000).round()),
-      switchInCurve: Curves.easeOut,
-      switchOutCurve: Curves.easeIn,
-      transitionBuilder: (child, animation) {
-        switch (transitionStyle.toLowerCase()) {
-          case 'slide':
-            return SlideTransition(
-              position: Tween<Offset>(
-                begin: const Offset(0.04, 0),
-                end: Offset.zero,
-              ).animate(animation),
-              child: FadeTransition(opacity: animation, child: child),
-            );
-          case 'zoom':
-            return ScaleTransition(
-              scale: Tween<double>(begin: 0.97, end: 1).animate(animation),
-              child: FadeTransition(opacity: animation, child: child),
-            );
-          case 'flip':
-            return RotationTransition(
-              turns: Tween<double>(begin: -0.01, end: 0).animate(animation),
-              child: FadeTransition(opacity: animation, child: child),
-            );
-          case 'fade':
-          default:
-            return FadeTransition(opacity: animation, child: child);
-        }
-      },
-      child: Stack(
-        key: ValueKey('todays-star-$safePageIndex-${items.length}'),
-        fit: StackFit.expand,
-        children: [
-          const Positioned.fill(child: _ComicStarBackground()),
-          SafeArea(
-            child: Padding(
-              padding: EdgeInsets.symmetric(
-                horizontal: (screenSize.width * 0.06).clamp(34.0, 92.0),
-                vertical: (screenSize.height * 0.06).clamp(28.0, 58.0),
-              ),
-              child: Column(
-                children: [
-                  Text(
-                    "TODAY'S STAR",
-                    textAlign: TextAlign.center,
-                    style: GoogleFonts.bangers(
-                      fontSize: ((screenSize.width * 0.044) * headingFontScale)
-                          .clamp(32.0, 80.0),
-                      color: const Color(0xFFFFD21F),
-                      letterSpacing: 1.2,
-                      shadows: const [
-                        Shadow(
-                          color: Color(0xFFE51F2D),
-                          offset: Offset(3, 0),
+    final productKey = ValueKey(
+      'todays-star-products-$safePageIndex-${pageItems.map((item) => item.id).join('-')}',
+    );
+
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        const Positioned.fill(child: _TodaysSpecialPosterBackground()),
+        const Positioned.fill(child: _PosterGarnishLayer()),
+        SafeArea(
+          child: Padding(
+            padding: EdgeInsets.symmetric(
+              horizontal: (screenSize.width * 0.055).clamp(30.0, 84.0),
+              vertical: (screenSize.height * 0.035).clamp(20.0, 42.0),
+            ),
+            child: Column(
+              children: [
+                _TodaysSpecialTitle(
+                  screenWidth: screenSize.width,
+                  fontScale: headingFontScale,
+                  language: displayLanguage,
+                ),
+                SizedBox(
+                  height: (screenSize.height * 0.016).clamp(10.0, 18.0),
+                ),
+                Expanded(
+                  child: ClipRect(
+                    child: AnimatedSwitcher(
+                      duration: Duration(
+                        milliseconds: (transitionSpeedSeconds * 1000).round(),
+                      ),
+                      switchInCurve: Curves.easeOut,
+                      switchOutCurve: Curves.easeIn,
+                      transitionBuilder: (child, animation) {
+                        switch (transitionStyle.toLowerCase()) {
+                          case 'slide':
+                            return SlideTransition(
+                              position: Tween<Offset>(
+                                begin: const Offset(0.04, 0),
+                                end: Offset.zero,
+                              ).animate(animation),
+                              child: FadeTransition(
+                                  opacity: animation, child: child),
+                            );
+                          case 'zoom':
+                            return ScaleTransition(
+                              scale: Tween<double>(begin: 0.98, end: 1)
+                                  .animate(animation),
+                              child: FadeTransition(
+                                  opacity: animation, child: child),
+                            );
+                          case 'flip':
+                            return RotationTransition(
+                              turns: Tween<double>(begin: -0.01, end: 0)
+                                  .animate(animation),
+                              child: FadeTransition(
+                                  opacity: animation, child: child),
+                            );
+                          case 'fade':
+                          default:
+                            return FadeTransition(
+                                opacity: animation, child: child);
+                        }
+                      },
+                      child: RepaintBoundary(
+                        key: productKey,
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: pageItems
+                              .map(
+                                (item) => Expanded(
+                                  child: _TodaysStarProduct(
+                                    item: item,
+                                    nameSize: nameSize,
+                                    priceSize: priceSize,
+                                    showPrice: showPrice,
+                                    showProductImage: showProductImage,
+                                    maxImageSize: min(
+                                      screenSize.width * 0.46,
+                                      screenSize.height * 0.54,
+                                    ).clamp(260.0, 560.0),
+                                  ),
+                                ),
+                              )
+                              .toList(),
                         ),
-                        Shadow(
-                          color: Color(0xFFE51F2D),
-                          offset: Offset(-3, 0),
-                        ),
-                        Shadow(
-                          color: Color(0xFFE51F2D),
-                          offset: Offset(0, 3),
-                        ),
-                        Shadow(
-                          color: Color(0xFFE51F2D),
-                          offset: Offset(0, -3),
-                        ),
-                        Shadow(
-                          color: Color(0x33000000),
-                          offset: Offset(6, 6),
-                          blurRadius: 2,
-                        ),
-                      ],
+                      ),
                     ),
                   ),
-                  SizedBox(
-                      height: (screenSize.height * 0.035).clamp(18.0, 36.0)),
-                  Expanded(
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      crossAxisAlignment: CrossAxisAlignment.center,
-                      children: pageItems
-                          .map(
-                            (item) => Expanded(
-                              child: _TodaysStarProduct(
-                                item: item,
-                                nameSize: nameSize,
-                                priceSize: priceSize,
-                                showPrice: showPrice,
-                                showProductImage: showProductImage,
-                                maxImageSize: (screenSize.height * 0.38)
-                                    .clamp(220.0, 430.0),
-                              ),
-                            ),
-                          )
-                          .toList(),
-                    ),
-                  ),
-                ],
-              ),
+                ),
+              ],
             ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }
@@ -686,9 +841,9 @@ class _TodaysStarProduct extends StatelessWidget {
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
-        final medallionSize = min(
+        final imageSize = min(
           maxImageSize,
-          min(constraints.maxWidth * 0.72, constraints.maxHeight * 0.56),
+          min(constraints.maxWidth * 0.62, constraints.maxHeight * 0.62),
         );
         final product = FittedBox(
           fit: BoxFit.scaleDown,
@@ -698,41 +853,26 @@ class _TodaysStarProduct extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               children: [
                 if (showProductImage) ...[
-                  _RedDottedProductCircle(
+                  _PosterProductImage(
                     item: item,
-                    size: medallionSize,
+                    size: imageSize,
                   ),
-                  SizedBox(height: medallionSize * 0.08),
+                  SizedBox(height: imageSize * 0.035),
                 ],
                 Text(
                   item.name,
                   textAlign: TextAlign.center,
-                  style: GoogleFonts.bangers(
+                  style: GoogleFonts.montserrat(
                     fontSize: nameSize,
-                    color: const Color(0xFFFFF04A),
-                    letterSpacing: 0.8,
-                    height: 1,
+                    color: Colors.white,
+                    letterSpacing: 0,
+                    height: 0.98,
+                    fontWeight: FontWeight.w900,
                     shadows: const [
                       Shadow(
-                        color: Color(0xFFE51F2D),
-                        offset: Offset(3, 0),
-                      ),
-                      Shadow(
-                        color: Color(0xFFE51F2D),
-                        offset: Offset(-3, 0),
-                      ),
-                      Shadow(
-                        color: Color(0xFFE51F2D),
-                        offset: Offset(0, 3),
-                      ),
-                      Shadow(
-                        color: Color(0xFFE51F2D),
-                        offset: Offset(0, -3),
-                      ),
-                      Shadow(
-                        color: Color(0x55000000),
-                        offset: Offset(5, 5),
-                        blurRadius: 1,
+                        color: Color(0xAA000000),
+                        offset: Offset(0, 8),
+                        blurRadius: 18,
                       ),
                     ],
                   ),
@@ -801,48 +941,68 @@ class _UnavailableTreatment extends StatelessWidget {
   }
 }
 
-class _RedDottedProductCircle extends StatelessWidget {
+class _PosterProductImage extends StatelessWidget {
   final MenuItem item;
   final double size;
 
-  const _RedDottedProductCircle({
+  const _PosterProductImage({
     required this.item,
     required this.size,
   });
 
   @override
   Widget build(BuildContext context) {
-    final imageSize = size * 0.72;
     return SizedBox(
       width: size,
       height: size,
       child: Stack(
         alignment: Alignment.center,
         children: [
-          CustomPaint(
-            size: Size.square(size),
-            painter: const _DottedCirclePainter(),
+          Positioned(
+            bottom: size * 0.02,
+            child: Container(
+              width: size * 0.82,
+              height: size * 0.16,
+              decoration: BoxDecoration(
+                color: Colors.black.withValues(alpha: 0.55),
+                borderRadius: BorderRadius.circular(size),
+                boxShadow: const [
+                  BoxShadow(
+                    color: Color(0xCC000000),
+                    blurRadius: 36,
+                    spreadRadius: 8,
+                  ),
+                ],
+              ),
+            ),
           ),
           Container(
-            width: imageSize,
-            height: imageSize,
+            width: size,
+            height: size,
             decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: const Color(0xFFFFF2D0),
-              border: Border.all(color: Colors.white, width: size * 0.025),
+              borderRadius: BorderRadius.circular(size * 0.08),
               boxShadow: const [
                 BoxShadow(
-                  color: Color(0x33000000),
-                  blurRadius: 22,
-                  offset: Offset(0, 12),
+                  color: Color(0x99000000),
+                  blurRadius: 34,
+                  offset: Offset(0, 24),
+                ),
+                BoxShadow(
+                  color: Color(0x55FF8A00),
+                  blurRadius: 42,
+                  spreadRadius: -12,
                 ),
               ],
             ),
-            child: ClipOval(
+            clipBehavior: Clip.antiAlias,
+            child: DecoratedBox(
+              decoration: const BoxDecoration(color: Color(0xFF151515)),
               child: item.imageUrl != null
                   ? CachedNetworkImage(
                       imageUrl: item.imageUrl!,
-                      fit: BoxFit.cover,
+                      fit: BoxFit.contain,
+                      fadeInDuration: const Duration(milliseconds: 120),
+                      fadeOutDuration: Duration.zero,
                       placeholder: (_, __) => const _StarPlaceholder(),
                       errorWidget: (_, __, ___) => const _StarPlaceholder(),
                     )
@@ -875,31 +1035,16 @@ class _TodaysStarPriceText extends StatelessWidget {
     return Text(
       text,
       textAlign: TextAlign.center,
-      style: GoogleFonts.bangers(
+      style: GoogleFonts.montserrat(
         fontSize: item.priceVariants.isNotEmpty ? fontSize * 0.74 : fontSize,
-        color: const Color(0xFF25E6FF),
-        letterSpacing: 0.7,
+        color: const Color(0xFFFF9B16),
+        letterSpacing: 0,
+        fontWeight: FontWeight.w900,
         shadows: const [
           Shadow(
-            color: Color(0xFF073B8E),
-            offset: Offset(3, 0),
-          ),
-          Shadow(
-            color: Color(0xFF073B8E),
-            offset: Offset(-3, 0),
-          ),
-          Shadow(
-            color: Color(0xFF073B8E),
-            offset: Offset(0, 3),
-          ),
-          Shadow(
-            color: Color(0xFF073B8E),
-            offset: Offset(0, -3),
-          ),
-          Shadow(
-            color: Color(0x66000000),
-            offset: Offset(5, 5),
-            blurRadius: 1,
+            color: Color(0xAA000000),
+            offset: Offset(0, 8),
+            blurRadius: 18,
           ),
         ],
       ),
@@ -915,15 +1060,15 @@ class _StarPlaceholder extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return const ColoredBox(
-      color: Color(0xFFFFE6B1),
+      color: Color(0xFF202020),
       child: Center(
         child: Text(
-          'STAR',
+          'SPECIAL',
           style: TextStyle(
-            color: Color(0xFFC62828),
+            color: Color(0xFFFF9B16),
             fontSize: 30,
             fontWeight: FontWeight.w900,
-            letterSpacing: 1.5,
+            letterSpacing: 0,
           ),
         ),
       ),
@@ -931,60 +1076,199 @@ class _StarPlaceholder extends StatelessWidget {
   }
 }
 
-class _ComicStarBackground extends StatelessWidget {
-  const _ComicStarBackground();
+class _TodaysSpecialTitle extends StatelessWidget {
+  final double screenWidth;
+  final double fontScale;
+  final String language;
+
+  const _TodaysSpecialTitle({
+    required this.screenWidth,
+    required this.fontScale,
+    required this.language,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return const ColoredBox(
-      color: Color(0xFFF04A4A),
-      child: CustomPaint(
-        painter: _ComicStarBackgroundPainter(),
+    if (_isMalayalam(language)) {
+      final fontSize = ((screenWidth * 0.076) * fontScale).clamp(48.0, 124.0);
+      return SizedBox(
+        width: double.infinity,
+        height: (fontSize * 1.45).clamp(120.0, 220.0),
+        child: Center(
+          child: Text(
+            _localizedMenuText(language, 'todaysStar'),
+            textAlign: TextAlign.center,
+            style: GoogleFonts.notoSansMalayalam(
+              fontSize: fontSize,
+              color: Colors.white,
+              fontWeight: FontWeight.w900,
+              height: 1,
+              shadows: const [
+                Shadow(
+                  color: Color(0xCC000000),
+                  offset: Offset(0, 10),
+                  blurRadius: 22,
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
+    final todaySize = ((screenWidth * 0.056) * fontScale).clamp(42.0, 100.0);
+    final scriptSize = ((screenWidth * 0.112) * fontScale).clamp(86.0, 190.0);
+    final menuSize = ((screenWidth * 0.062) * fontScale).clamp(48.0, 112.0);
+
+    return SizedBox(
+      width: double.infinity,
+      height: (scriptSize * 1.38).clamp(130.0, 250.0),
+      child: Stack(
+        alignment: Alignment.topCenter,
+        clipBehavior: Clip.none,
+        children: [
+          Positioned(
+            top: scriptSize * 0.06,
+            child: RichText(
+              textAlign: TextAlign.center,
+              text: TextSpan(
+                style: GoogleFonts.montserrat(
+                  fontSize: todaySize,
+                  fontWeight: FontWeight.w900,
+                  height: 0.95,
+                  letterSpacing: 0,
+                ),
+                children: const [
+                  TextSpan(
+                    text: 'TODAY',
+                    style: TextStyle(color: Color(0xFFFFDB1E)),
+                  ),
+                  TextSpan(
+                    text: '.',
+                    style: TextStyle(color: Colors.white),
+                  ),
+                ],
+              ),
+            ),
+          ),
+          Positioned(
+            top: todaySize * 0.50,
+            child: Text(
+              'Special',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.greatVibes(
+                fontSize: scriptSize,
+                color: Colors.white,
+                height: 0.84,
+                shadows: const [
+                  Shadow(
+                    color: Color(0xCC000000),
+                    offset: Offset(0, 10),
+                    blurRadius: 22,
+                  ),
+                ],
+              ),
+            ),
+          ),
+          Positioned(
+            top: scriptSize * 0.84,
+            child: Text(
+              'menu',
+              textAlign: TextAlign.center,
+              style: GoogleFonts.montserrat(
+                fontSize: menuSize,
+                color: const Color(0xFFFF8A00),
+                fontWeight: FontWeight.w500,
+                height: 0.9,
+                letterSpacing: 0,
+                shadows: const [
+                  Shadow(
+                    color: Color(0x99000000),
+                    offset: Offset(0, 8),
+                    blurRadius: 18,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
 }
 
-class _ComicStarBackgroundPainter extends CustomPainter {
-  const _ComicStarBackgroundPainter();
+class _TodaysSpecialPosterBackground extends StatelessWidget {
+  const _TodaysSpecialPosterBackground();
+
+  @override
+  Widget build(BuildContext context) {
+    return const ColoredBox(
+      color: Color(0xFF070707),
+      child: CustomPaint(
+        painter: _TodaysSpecialPosterBackgroundPainter(),
+      ),
+    );
+  }
+}
+
+class _TodaysSpecialPosterBackgroundPainter extends CustomPainter {
+  const _TodaysSpecialPosterBackgroundPainter();
 
   @override
   void paint(Canvas canvas, Size size) {
-    final center = Offset(size.width * 0.5, size.height * 0.44);
-    const rayCount = 28;
-    final radius = size.longestSide * 0.78;
-    final redPaint = Paint()
-      ..color = const Color(0xFFFF5A5A).withValues(alpha: 0.46)
-      ..style = PaintingStyle.fill;
-    final paleRedPaint = Paint()
-      ..color = const Color(0xFFFF7A7A).withValues(alpha: 0.40)
-      ..style = PaintingStyle.fill;
-    final linePaint = Paint()
-      ..color = const Color(0xFFE51F2D).withValues(alpha: 0.22)
-      ..strokeWidth = 3
-      ..style = PaintingStyle.stroke;
+    final rect = Offset.zero & size;
+    final base = Paint()
+      ..shader = const LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: [
+          Color(0xFF050505),
+          Color(0xFF151515),
+          Color(0xFF110A20),
+        ],
+        stops: [0, 0.58, 1],
+      ).createShader(rect);
+    canvas.drawRect(rect, base);
 
-    for (var i = 0; i < rayCount; i++) {
-      final a1 = (i / rayCount) * pi * 2;
-      final a2 = ((i + 0.58) / rayCount) * pi * 2;
-      final path = Path()
-        ..moveTo(center.dx, center.dy)
-        ..lineTo(center.dx + cos(a1) * radius, center.dy + sin(a1) * radius)
-        ..lineTo(center.dx + cos(a2) * radius, center.dy + sin(a2) * radius)
-        ..close();
-      canvas.drawPath(path, i.isEven ? redPaint : paleRedPaint);
-      if (i.isEven) canvas.drawPath(path, linePaint);
+    final purpleWash = Paint()
+      ..shader = RadialGradient(
+        center: const Alignment(0, 0.78),
+        radius: 1.1,
+        colors: [
+          const Color(0xFF2D0D62).withValues(alpha: 0.70),
+          Colors.transparent,
+        ],
+      ).createShader(rect);
+    canvas.drawRect(rect, purpleWash);
+
+    final smokePaint = Paint()
+      ..color = Colors.white.withValues(alpha: 0.055)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 2.2
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 10);
+    for (var i = 0; i < 7; i++) {
+      final y = size.height * (0.24 + i * 0.075);
+      final path = Path()..moveTo(-size.width * 0.05, y);
+      for (var x = -size.width * 0.05; x <= size.width * 1.05; x += 80) {
+        path.quadraticBezierTo(
+          x + 36,
+          y + sin(i + x * 0.015) * 34,
+          x + 80,
+          y + cos(i + x * 0.011) * 18,
+        );
+      }
+      canvas.drawPath(path, smokePaint);
     }
 
-    final dotPaint = Paint()
-      ..color = const Color(0xFFFFD1D1).withValues(alpha: 0.34)
+    final texturePaint = Paint()
+      ..color = Colors.white.withValues(alpha: 0.028)
       ..style = PaintingStyle.fill;
-    const spacing = 22.0;
-    for (var y = 8.0; y < size.height; y += spacing) {
-      for (var x = 8.0; x < size.width; x += spacing) {
-        final dist = (Offset(x, y) - center).distance;
-        final dotRadius = dist < radius * 0.55 ? 2.2 : 1.2;
-        canvas.drawCircle(Offset(x, y), dotRadius, dotPaint);
+    const spacing = 18.0;
+    for (var y = 0.0; y < size.height; y += spacing) {
+      for (var x = 0.0; x < size.width; x += spacing) {
+        final jitter = sin(x * 12.9898 + y * 78.233);
+        canvas.drawCircle(
+            Offset(x, y), jitter > 0.35 ? 0.9 : 0.35, texturePaint);
       }
     }
   }
@@ -993,41 +1277,237 @@ class _ComicStarBackgroundPainter extends CustomPainter {
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
-class _DottedCirclePainter extends CustomPainter {
-  const _DottedCirclePainter();
+class _PosterGarnishLayer extends StatelessWidget {
+  const _PosterGarnishLayer();
+
+  @override
+  Widget build(BuildContext context) {
+    return const Stack(
+      children: [
+        Positioned(
+          left: 28,
+          top: 118,
+          child: _TomatoSlice(size: 78, angle: -0.45),
+        ),
+        Positioned(
+          left: 172,
+          top: 236,
+          child: _LeafAccent(size: 48, angle: 0.25),
+        ),
+        Positioned(
+          right: 94,
+          top: 74,
+          child: _LeafAccent(size: 74, angle: 0.45),
+        ),
+        Positioned(
+          left: 48,
+          bottom: 118,
+          child: _ChilliAccent(width: 150, angle: -0.06),
+        ),
+        Positioned(
+          right: 74,
+          bottom: 76,
+          child: _ChilliAccent(width: 130, angle: -0.20),
+        ),
+        Positioned(
+          left: 136,
+          top: 58,
+          child: _WavyAccent(width: 72),
+        ),
+        Positioned(
+          right: 96,
+          top: 250,
+          child: _WavyAccent(width: 82),
+        ),
+      ],
+    );
+  }
+}
+
+class _TomatoSlice extends StatelessWidget {
+  final double size;
+  final double angle;
+
+  const _TomatoSlice({required this.size, required this.angle});
+
+  @override
+  Widget build(BuildContext context) {
+    return Transform.rotate(
+      angle: angle,
+      child: SizedBox(
+        width: size,
+        height: size,
+        child: const CustomPaint(painter: _TomatoPainter()),
+      ),
+    );
+  }
+}
+
+class _TomatoPainter extends CustomPainter {
+  const _TomatoPainter();
 
   @override
   void paint(Canvas canvas, Size size) {
     final center = Offset(size.width / 2, size.height / 2);
-    final radius = size.width / 2;
-    final basePaint = Paint()
-      ..color = const Color(0xFFC62828)
-      ..style = PaintingStyle.fill;
-    final shadowPaint = Paint()
-      ..color = const Color(0x22000000)
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 12);
-    canvas.drawCircle(center.translate(0, 8), radius * 0.94, shadowPaint);
-    canvas.drawCircle(center, radius * 0.92, basePaint);
-
-    final dotPaint = Paint()
-      ..color = const Color(0xFFFFF0BE).withValues(alpha: 0.75)
-      ..style = PaintingStyle.fill;
-    const ringCount = 8;
-    for (var ring = 1; ring <= ringCount; ring++) {
-      final ringRadius = radius * (0.16 + ring * 0.09);
-      final dots = (ringRadius / 5).round().clamp(10, 54);
-      for (var i = 0; i < dots; i++) {
-        final angle = (i / dots) * pi * 2 + ring * 0.23;
-        canvas.drawCircle(
-          Offset(
-            center.dx + cos(angle) * ringRadius,
-            center.dy + sin(angle) * ringRadius,
-          ),
-          radius * 0.012,
-          dotPaint,
-        );
-      }
+    final radius = size.shortestSide / 2;
+    canvas.drawCircle(center, radius, Paint()..color = const Color(0xFFE53935));
+    canvas.drawCircle(
+      center,
+      radius * 0.72,
+      Paint()..color = const Color(0xFFFF6E5D),
+    );
+    final seedPaint = Paint()..color = const Color(0xFFFFE09A);
+    for (var i = 0; i < 10; i++) {
+      final angle = i * pi / 5;
+      canvas.drawOval(
+        Rect.fromCenter(
+          center: center + Offset(cos(angle), sin(angle)) * radius * 0.42,
+          width: radius * 0.16,
+          height: radius * 0.08,
+        ),
+        seedPaint,
+      );
     }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+class _LeafAccent extends StatelessWidget {
+  final double size;
+  final double angle;
+
+  const _LeafAccent({required this.size, required this.angle});
+
+  @override
+  Widget build(BuildContext context) {
+    return Transform.rotate(
+      angle: angle,
+      child: SizedBox(
+        width: size * 0.56,
+        height: size,
+        child: const CustomPaint(painter: _LeafPainter()),
+      ),
+    );
+  }
+}
+
+class _LeafPainter extends CustomPainter {
+  const _LeafPainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final path = Path()
+      ..moveTo(size.width * 0.50, 0)
+      ..cubicTo(size.width * 1.10, size.height * 0.28, size.width * 0.92,
+          size.height * 0.78, size.width * 0.50, size.height)
+      ..cubicTo(size.width * 0.08, size.height * 0.78, -size.width * 0.10,
+          size.height * 0.28, size.width * 0.50, 0)
+      ..close();
+    canvas.drawPath(path, Paint()..color = const Color(0xFF71C837));
+    canvas.drawPath(
+      Path()
+        ..moveTo(size.width * 0.50, size.height * 0.10)
+        ..lineTo(size.width * 0.50, size.height * 0.92),
+      Paint()
+        ..color = const Color(0xFFD8FF85)
+        ..strokeWidth = max(1.0, size.width * 0.05)
+        ..style = PaintingStyle.stroke,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+class _ChilliAccent extends StatelessWidget {
+  final double width;
+  final double angle;
+
+  const _ChilliAccent({required this.width, required this.angle});
+
+  @override
+  Widget build(BuildContext context) {
+    return Transform.rotate(
+      angle: angle,
+      child: SizedBox(
+        width: width,
+        height: width * 0.24,
+        child: const CustomPaint(painter: _ChilliPainter()),
+      ),
+    );
+  }
+}
+
+class _ChilliPainter extends CustomPainter {
+  const _ChilliPainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final body = Path()
+      ..moveTo(size.width * 0.10, size.height * 0.55)
+      ..cubicTo(size.width * 0.36, size.height * 0.12, size.width * 0.73,
+          size.height * 0.14, size.width * 0.93, size.height * 0.48)
+      ..cubicTo(size.width * 0.72, size.height * 0.70, size.width * 0.34,
+          size.height * 0.86, size.width * 0.10, size.height * 0.55)
+      ..close();
+    canvas.drawPath(body, Paint()..color = const Color(0xFFE52420));
+    canvas.drawPath(
+      Path()
+        ..moveTo(size.width * 0.90, size.height * 0.48)
+        ..quadraticBezierTo(size.width, size.height * 0.22, size.width * 1.05,
+            size.height * 0.06),
+      Paint()
+        ..color = const Color(0xFF7FAF25)
+        ..strokeWidth = size.height * 0.12
+        ..strokeCap = StrokeCap.round
+        ..style = PaintingStyle.stroke,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+class _WavyAccent extends StatelessWidget {
+  final double width;
+
+  const _WavyAccent({required this.width});
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: width,
+      height: 16,
+      child: const CustomPaint(painter: _WavyPainter()),
+    );
+  }
+}
+
+class _WavyPainter extends CustomPainter {
+  const _WavyPainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final path = Path()..moveTo(0, size.height / 2);
+    final segment = size.width / 8;
+    for (var i = 0; i < 8; i++) {
+      final x = i * segment;
+      path.quadraticBezierTo(
+        x + segment / 2,
+        i.isEven ? 0 : size.height,
+        x + segment,
+        size.height / 2,
+      );
+    }
+    canvas.drawPath(
+      path,
+      Paint()
+        ..color = const Color(0xFFFF8A3D)
+        ..strokeWidth = 2.3
+        ..style = PaintingStyle.stroke,
+    );
   }
 
   @override
@@ -1049,6 +1529,7 @@ class _PagedMenu extends StatelessWidget {
   final bool showDietTags;
   final String heading;
   final String sectionMode;
+  final String displayLanguage;
   final double headingFontScale;
   final double nameFontScale;
   final double descriptionFontScale;
@@ -1069,6 +1550,7 @@ class _PagedMenu extends StatelessWidget {
     required this.showDietTags,
     required this.heading,
     required this.sectionMode,
+    required this.displayLanguage,
     required this.headingFontScale,
     required this.nameFontScale,
     required this.descriptionFontScale,
@@ -1178,6 +1660,7 @@ class _PagedMenu extends StatelessWidget {
                 _StandardSectionHeading(
                   text: heading,
                   sectionMode: sectionMode,
+                  displayLanguage: displayLanguage,
                   theme: theme,
                   catTheme: catTheme,
                   showDietTags: showDietTags,
@@ -1214,8 +1697,8 @@ class _MenuPageMetrics {
     const dividerHeight = 1.0;
     final baseRowHeight = (size.width * 0.12).clamp(170.0, 220.0);
     final headingFontSize =
-        ((size.width * 0.034) * headingFontScale).clamp(30.0, 68.0);
-    final headingHeight = headingFontSize * 1.25;
+        ((size.width * 0.040) * headingFontScale).clamp(34.0, 78.0);
+    final headingHeight = headingFontSize * 1.42;
     final headingBlockHeight = headingHeight + _PagedMenu._headingGap;
     final availableRowsHeight =
         (size.height - _PagedMenu._verticalPadding - headingBlockHeight)
@@ -1235,6 +1718,7 @@ class _MenuPageMetrics {
 class _StandardSectionHeading extends StatelessWidget {
   final String text;
   final String sectionMode;
+  final String displayLanguage;
   final TvMenuThemeData theme;
   final CategoryTheme catTheme;
   final bool showDietTags;
@@ -1245,6 +1729,7 @@ class _StandardSectionHeading extends StatelessWidget {
   const _StandardSectionHeading({
     required this.text,
     required this.sectionMode,
+    required this.displayLanguage,
     required this.theme,
     required this.catTheme,
     required this.showDietTags,
@@ -1255,6 +1740,28 @@ class _StandardSectionHeading extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isMalayalam = _isMalayalam(displayLanguage);
+    final headingText = isMalayalam ? text : text.toUpperCase();
+    final fontSize = isMalayalam
+        ? ((screenWidth * 0.052) * fontScale).clamp(46.0, 104.0)
+        : ((screenWidth * 0.040) * fontScale).clamp(34.0, 78.0);
+    final fillColor = theme.primaryText;
+    final shadowColor = const Color(0xFF5A2A12).withValues(alpha: 0.46);
+    final glowColor = catTheme.primary.withValues(alpha: 0.30);
+    final baseStyle = isMalayalam
+        ? GoogleFonts.balooChettan2(
+            fontSize: fontSize,
+            fontWeight: FontWeight.w900,
+            height: 0.78,
+            letterSpacing: -0.2,
+          )
+        : GoogleFonts.lilitaOne(
+            fontSize: fontSize,
+            fontWeight: FontWeight.w900,
+            height: 0.88,
+            letterSpacing: 0.6,
+          );
+
     return SizedBox(
       height: height,
       width: double.infinity,
@@ -1265,25 +1772,66 @@ class _StandardSectionHeading extends StatelessWidget {
             child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text(
-                  text.toUpperCase(),
-                  textAlign: TextAlign.center,
-                  style: GoogleFonts.playfairDisplay(
-                    fontSize:
-                        ((screenWidth * 0.034) * fontScale).clamp(30.0, 68.0),
-                    fontWeight: FontWeight.w800,
-                    color: theme.primaryText,
-                    height: 1,
-                    letterSpacing: 1.2,
-                    shadows: [
-                      Shadow(
-                        color: catTheme.primary.withValues(alpha: 0.28),
-                        blurRadius: 18,
+                Transform.scale(
+                  scaleX: isMalayalam ? 1.08 : 1,
+                  scaleY: isMalayalam ? 1.16 : 1,
+                  child: Stack(
+                    clipBehavior: Clip.none,
+                    children: [
+                      Positioned(
+                        left: fontSize * 0.050,
+                        top: fontSize * 0.080,
+                        child: Text(
+                          headingText,
+                          textAlign: TextAlign.center,
+                          style: baseStyle.copyWith(
+                            color: shadowColor,
+                            shadows: [
+                              Shadow(
+                                color: glowColor,
+                                blurRadius: fontSize * 0.34,
+                              ),
+                            ],
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.visible,
+                        ),
+                      ),
+                      Text(
+                        headingText,
+                        textAlign: TextAlign.center,
+                        style: baseStyle.copyWith(
+                          foreground: Paint()
+                            ..style = PaintingStyle.stroke
+                            ..strokeWidth =
+                                (fontSize * (isMalayalam ? 0.055 : 0.035))
+                                    .clamp(1.8, 5.2)
+                            ..color = catTheme.primary.withValues(alpha: 0.42),
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.visible,
+                      ),
+                      Text(
+                        headingText,
+                        textAlign: TextAlign.center,
+                        style: baseStyle.copyWith(
+                          color: fillColor,
+                          shadows: [
+                            Shadow(
+                              color: Colors.black.withValues(alpha: 0.16),
+                              offset: Offset(
+                                fontSize * 0.018,
+                                fontSize * 0.026,
+                              ),
+                              blurRadius: 0,
+                            ),
+                          ],
+                        ),
+                        maxLines: 1,
+                        overflow: TextOverflow.visible,
                       ),
                     ],
                   ),
-                  maxLines: 1,
-                  overflow: TextOverflow.visible,
                 ),
                 if (showDietTags &&
                     (sectionMode == 'veg' || sectionMode == 'nonVeg')) ...[
@@ -1382,7 +1930,12 @@ class _RowDivider extends StatelessWidget {
 class _EmptyState extends StatelessWidget {
   final CategoryTheme catTheme;
   final TvMenuThemeData theme;
-  const _EmptyState({required this.catTheme, required this.theme});
+  final String displayLanguage;
+  const _EmptyState({
+    required this.catTheme,
+    required this.theme,
+    required this.displayLanguage,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -1400,7 +1953,7 @@ class _EmptyState extends StatelessWidget {
           ),
           const SizedBox(height: 20),
           Text(
-            'Add items from the app',
+            _localizedMenuText(displayLanguage, 'addItems'),
             style: GoogleFonts.playfairDisplay(
               fontSize: 28,
               color: theme.secondaryText,
@@ -1408,7 +1961,7 @@ class _EmptyState extends StatelessWidget {
           ),
           const SizedBox(height: 8),
           Text(
-            'New products and media will appear here automatically.',
+            _localizedMenuText(displayLanguage, 'newProducts'),
             style: GoogleFonts.nunito(
               fontSize: 16,
               color: theme.secondaryText,
@@ -1433,21 +1986,6 @@ class _AnimatedMenuBackground extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (!theme.animated) {
-      return Stack(
-        children: [
-          Positioned.fill(child: _TextureBackground(theme: theme)),
-          Positioned.fill(
-            child: _RadialWash(
-              theme: theme,
-              catTheme: catTheme,
-              progress: 0,
-            ),
-          ),
-        ],
-      );
-    }
-
     return AnimatedBuilder(
       animation: controller,
       builder: (context, _) {
@@ -1466,7 +2004,9 @@ class _AnimatedMenuBackground extends StatelessWidget {
                       theme.background,
                     ],
                     stops: const [0, 0.55, 1],
-                    transform: GradientRotation(controller.value * 6.28318),
+                    transform: theme.animated
+                        ? GradientRotation(controller.value * 6.28318)
+                        : null,
                   ),
                 ),
               ),
@@ -1504,18 +2044,16 @@ class _RadialWash extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final center = theme.animated
-        ? Alignment(
-            0.36 * sin(progress * 6.28318),
-            0.28 * cos(progress * 6.28318),
-          )
-        : Alignment.center;
+    final center = Alignment(
+      0.36 * sin(progress * 6.28318),
+      0.28 * cos(progress * 6.28318),
+    );
 
     return DecoratedBox(
       decoration: BoxDecoration(
         gradient: RadialGradient(
           center: center,
-          radius: theme.animated ? 1.55 : 1.35,
+          radius: 1.55,
           colors: [
             theme.glowColor,
             Color.lerp(
@@ -1523,7 +2061,7 @@ class _RadialWash extends StatelessWidget {
               catTheme.gradient[0],
               theme.isDark ? 0.12 : 0.08,
             )!,
-            theme.background.withOpacity(theme.isDark ? 0.72 : 0.62),
+            theme.background.withValues(alpha: theme.isDark ? 0.72 : 0.62),
           ],
           stops: const [0, 0.45, 1],
         ),

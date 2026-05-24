@@ -25,7 +25,14 @@ List<String> _contentModesFrom(String value) {
       .where((mode) => mode.isNotEmpty)
       .toList();
   if (modes.isEmpty || modes.contains('allCategories')) {
-    return const ['category', 'allMedia', 'comboOffers', 'todaysStar'];
+    return const [
+      'category',
+      'allMedia',
+      'comboOffers',
+      'offers',
+      'notices',
+      'todaysStar'
+    ];
   }
   return modes;
 }
@@ -144,6 +151,8 @@ class _RootScreenState extends State<RootScreen> {
           mode == 'allCategories' ||
           mode == 'category' ||
           mode == 'comboOffers' ||
+          mode == 'offers' ||
+          mode == 'notices' ||
           mode == 'todaysStar',
     );
 
@@ -315,13 +324,12 @@ class _MixedDisplayScreenState extends State<_MixedDisplayScreen> {
 
   bool get _usesBackendMedia => _contentModes.contains('media');
 
-  List<DisplayMediaItem> get _availableMediaItems => _usesBackendMedia &&
-          widget.display.mediaItems.isNotEmpty
-      ? widget.display.mediaItems
-      : _localMediaItems;
+  List<DisplayMediaItem> get _availableMediaItems =>
+      _usesBackendMedia && widget.display.mediaItems.isNotEmpty
+          ? widget.display.mediaItems
+          : _localMediaItems;
 
-  bool get _hasMediaContent =>
-      _availableMediaItems.isNotEmpty;
+  bool get _hasMediaContent => _availableMediaItems.isNotEmpty;
 
   @override
   void initState() {
@@ -336,7 +344,8 @@ class _MixedDisplayScreenState extends State<_MixedDisplayScreen> {
     if (oldWidget.display.contentMode != widget.display.contentMode ||
         oldWidget.display.autoScrollIntervalSeconds !=
             widget.display.autoScrollIntervalSeconds ||
-        oldWidget.display.mediaItems.length != widget.display.mediaItems.length) {
+        oldWidget.display.mediaItems.length !=
+            widget.display.mediaItems.length) {
       _index = 0;
       _scanLocalMediaIfNeeded();
       _startTimer();

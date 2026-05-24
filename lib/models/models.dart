@@ -123,6 +123,7 @@ class DisplayConfig {
   final int? selectedMediaId;
   final String? themeOverride;
   final String? themeColor;
+  final String displayLanguage;
   final String transitionStyle;
   final double transitionSpeedSeconds;
   final int? autoScrollIntervalSeconds;
@@ -136,12 +137,14 @@ class DisplayConfig {
   final bool showCompanyName;
   final bool showProductImage;
   final bool showDietTags;
+  final bool showComboItemQuantity;
   final double headingFontScale;
   final double nameFontScale;
   final double descriptionFontScale;
   final double priceFontScale;
   final List<DisplayMediaItem> mediaItems;
   final List<MenuItem> menuItems;
+  final List<NoticeItem> notices;
 
   const DisplayConfig({
     required this.mode,
@@ -153,6 +156,7 @@ class DisplayConfig {
     this.selectedMediaId,
     this.themeOverride,
     this.themeColor,
+    this.displayLanguage = 'english',
     this.transitionStyle = 'fade',
     this.transitionSpeedSeconds = 0.5,
     this.autoScrollIntervalSeconds,
@@ -166,12 +170,14 @@ class DisplayConfig {
     this.showCompanyName = true,
     this.showProductImage = true,
     this.showDietTags = true,
+    this.showComboItemQuantity = true,
     this.headingFontScale = 1.0,
     this.nameFontScale = 1.0,
     this.descriptionFontScale = 1.0,
     this.priceFontScale = 1.0,
     this.mediaItems = const [],
     this.menuItems = const [],
+    this.notices = const [],
   });
 
   factory DisplayConfig.fromJson(Map<String, dynamic> json) {
@@ -193,6 +199,7 @@ class DisplayConfig {
           : null,
       themeOverride: json['themeOverride'] as String?,
       themeColor: json['themeColor'] as String?,
+      displayLanguage: json['displayLanguage'] as String? ?? 'english',
       transitionStyle: json['transitionStyle'] as String? ?? 'fade',
       transitionSpeedSeconds:
           (json['transitionSpeedSeconds'] as num?)?.toDouble() ?? 0.5,
@@ -207,6 +214,7 @@ class DisplayConfig {
       showCompanyName: json['showCompanyName'] as bool? ?? true,
       showProductImage: json['showProductImage'] as bool? ?? true,
       showDietTags: json['showDietTags'] as bool? ?? true,
+      showComboItemQuantity: json['showComboItemQuantity'] as bool? ?? true,
       headingFontScale: (json['headingFontScale'] as num?)?.toDouble() ?? 1.0,
       nameFontScale: (json['nameFontScale'] as num?)?.toDouble() ?? 1.0,
       descriptionFontScale:
@@ -217,6 +225,7 @@ class DisplayConfig {
           .map(DisplayMediaItem.fromJson)
           .toList(),
       menuItems: _parseMenuItems(json['menuItems'] as List? ?? []),
+      notices: _parseNotices(json['notices'] as List? ?? []),
     );
   }
 
@@ -230,6 +239,7 @@ class DisplayConfig {
         'selectedMediaId': selectedMediaId,
         'themeOverride': themeOverride,
         'themeColor': themeColor,
+        'displayLanguage': displayLanguage,
         'transitionStyle': transitionStyle,
         'transitionSpeedSeconds': transitionSpeedSeconds,
         'autoScrollIntervalSeconds': autoScrollIntervalSeconds,
@@ -243,12 +253,14 @@ class DisplayConfig {
         'showCompanyName': showCompanyName,
         'showProductImage': showProductImage,
         'showDietTags': showDietTags,
+        'showComboItemQuantity': showComboItemQuantity,
         'headingFontScale': headingFontScale,
         'nameFontScale': nameFontScale,
         'descriptionFontScale': descriptionFontScale,
         'priceFontScale': priceFontScale,
         'mediaItems': mediaItems.map((item) => item.toJson()).toList(),
         'menuItems': menuItems.map((item) => item.toJson()).toList(),
+        'notices': notices.map((notice) => notice.toJson()).toList(),
       };
 }
 
@@ -294,6 +306,41 @@ List<MenuItem> _parseMenuItems(List<dynamic> items) {
   return parsed;
 }
 
+List<NoticeItem> _parseNotices(List<dynamic> notices) {
+  final parsed = <NoticeItem>[];
+  for (final notice in notices) {
+    if (notice is! Map) continue;
+    parsed.add(NoticeItem.fromJson(Map<String, dynamic>.from(notice)));
+  }
+  return parsed;
+}
+
+class NoticeItem {
+  final int id;
+  final String content;
+  final DateTime? createdAt;
+
+  const NoticeItem({
+    required this.id,
+    required this.content,
+    this.createdAt,
+  });
+
+  factory NoticeItem.fromJson(Map<String, dynamic> json) {
+    return NoticeItem(
+      id: (json['id'] as num?)?.toInt() ?? 0,
+      content: json['content'] as String? ?? '',
+      createdAt: DateTime.tryParse(json['createdAt']?.toString() ?? ''),
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+        'id': id,
+        'content': content,
+        'createdAt': createdAt?.toIso8601String(),
+      };
+}
+
 class MenuItem {
   final String id;
   final String name;
@@ -309,6 +356,7 @@ class MenuItem {
   final List<String> tags;
   final double? originalPrice; // for strike-through discount display
   final List<ComboOfferItem> comboItems;
+  final String? offerType;
 
   const MenuItem({
     required this.id,
@@ -325,6 +373,7 @@ class MenuItem {
     this.tags = const [],
     this.originalPrice,
     this.comboItems = const [],
+    this.offerType,
   });
 
   factory MenuItem.fromJson(Map<String, dynamic> json) {
@@ -359,6 +408,7 @@ class MenuItem {
       comboItems: _parseComboOfferItems(
         (json['comboItems'] ?? json['items']) as List? ?? [],
       ),
+      offerType: json['offerType'] as String?,
     );
   }
 
@@ -378,6 +428,7 @@ class MenuItem {
         'tags': tags,
         'originalPrice': originalPrice,
         'comboItems': comboItems.map((item) => item.toJson()).toList(),
+        'offerType': offerType,
       };
 }
 
@@ -406,6 +457,12 @@ class ComboOfferItem {
   final int quantity;
   final String? variantLabel;
   final double? variantPrice;
+  final double? discountPrice;
+  final int? buyQuantity;
+  final int? freeQuantity;
+  final String? freeVariantLabel;
+  final double? freeVariantPrice;
+  final MenuItem? freeProduct;
   final MenuItem product;
 
   const ComboOfferItem({
@@ -413,17 +470,31 @@ class ComboOfferItem {
     required this.quantity,
     this.variantLabel,
     this.variantPrice,
+    this.discountPrice,
+    this.buyQuantity,
+    this.freeQuantity,
+    this.freeVariantLabel,
+    this.freeVariantPrice,
+    this.freeProduct,
     required this.product,
   });
 
   factory ComboOfferItem.fromJson(Map<String, dynamic> json) {
     final productJson =
         (json['product'] ?? json['menuItem']) as Map<String, dynamic>;
+    final freeProductJson = json['freeProduct'] as Map<String, dynamic>?;
     return ComboOfferItem(
       id: (json['id'] as num?)?.toInt() ?? 0,
       quantity: (json['quantity'] as num?)?.toInt() ?? 1,
       variantLabel: json['variantLabel'] as String?,
       variantPrice: (json['variantPrice'] as num?)?.toDouble(),
+      discountPrice: (json['discountPrice'] as num?)?.toDouble(),
+      buyQuantity: (json['buyQuantity'] as num?)?.toInt(),
+      freeQuantity: (json['freeQuantity'] as num?)?.toInt(),
+      freeVariantLabel: json['freeVariantLabel'] as String?,
+      freeVariantPrice: (json['freeVariantPrice'] as num?)?.toDouble(),
+      freeProduct:
+          freeProductJson == null ? null : MenuItem.fromJson(freeProductJson),
       product: MenuItem.fromJson(productJson),
     );
   }
@@ -433,6 +504,12 @@ class ComboOfferItem {
         'quantity': quantity,
         'variantLabel': variantLabel,
         'variantPrice': variantPrice,
+        'discountPrice': discountPrice,
+        'buyQuantity': buyQuantity,
+        'freeQuantity': freeQuantity,
+        'freeVariantLabel': freeVariantLabel,
+        'freeVariantPrice': freeVariantPrice,
+        'freeProduct': freeProduct?.toJson(),
         'product': product.toJson(),
       };
 }

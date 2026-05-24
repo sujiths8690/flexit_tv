@@ -6,10 +6,6 @@ import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.os.PowerManager
-import org.json.JSONObject
-import java.net.HttpURLConnection
-import java.net.URLEncoder
-import java.net.URL
 import java.util.Calendar
 
 object ScheduleStore {
@@ -21,9 +17,7 @@ object ScheduleStore {
     private const val KEY_NEXT_START = "nextStartAtMillis"
     private const val KEY_BASE_URL = "baseUrl"
     private const val KEY_DEVICE_CODE = "deviceCode"
-    private const val CONFIG_CHECK_REQUEST_CODE = 1000
     private const val LAUNCH_REQUEST_CODE = 1001
-    private const val CONFIG_CHECK_INTERVAL_MS = 60_000L
     private const val ALWAYS_ON_RETRY_MS = 30_000L
     private const val FOREGROUND_LAUNCH_DELAY_MS = 1_000L
 
@@ -61,66 +55,11 @@ object ScheduleStore {
     }
 
     fun scheduleConfigCheck(context: Context) {
-        val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-        if (prefs.getString(KEY_BASE_URL, null).isNullOrBlank()) return
-        if (prefs.getString(KEY_DEVICE_CODE, null).isNullOrBlank()) return
-
-        val alarmManager = context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
-        val pendingIntent = PendingIntent.getBroadcast(
-            context,
-            CONFIG_CHECK_REQUEST_CODE,
-            Intent(context, ConfigCheckReceiver::class.java),
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
-        )
-
-        alarmManager.set(
-            AlarmManager.RTC_WAKEUP,
-            System.currentTimeMillis() + CONFIG_CHECK_INTERVAL_MS,
-            pendingIntent
-        )
+        // Display config is delivered by the Flutter websocket service.
     }
 
     fun refreshFromBackend(context: Context): Boolean {
-        val prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
-        val baseUrl = prefs.getString(KEY_BASE_URL, null)?.trimEnd('/') ?: return false
-        val deviceCode = prefs.getString(KEY_DEVICE_CODE, null)?.trim() ?: return false
-        if (deviceCode.isBlank()) return false
-
-        val encodedDeviceCode = URLEncoder.encode(deviceCode, "UTF-8")
-        val url = URL("$baseUrl/api/content/device/${encodedDeviceCode}/config")
-        val connection = (url.openConnection() as HttpURLConnection).apply {
-            requestMethod = "GET"
-            connectTimeout = 5000
-            readTimeout = 5000
-            setRequestProperty("Content-Type", "application/json")
-        }
-
-        return try {
-            if (connection.responseCode !in 200..299) return false
-
-            val raw = connection.inputStream.bufferedReader().use { it.readText() }
-            val data = JSONObject(raw).optJSONObject("data") ?: return false
-            val display = data.optJSONObject("displayConfig") ?: return false
-
-            val alwaysOn = display.optBoolean(KEY_ALWAYS_ON, true)
-            val scheduleEnabled = display.optBoolean(KEY_SCHEDULE_ENABLED, false)
-            val startTime = display.optString("scheduleStartTime", "09:00")
-            val endTime = display.optString("scheduleEndTime", "22:00")
-
-            prefs.edit()
-                .putBoolean(KEY_ALWAYS_ON, alwaysOn)
-                .putBoolean(KEY_SCHEDULE_ENABLED, scheduleEnabled)
-                .putString(KEY_START_TIME, startTime)
-                .putString(KEY_END_TIME, endTime)
-                .putLong(KEY_NEXT_START, computeNextStartAtMillis(startTime, endTime))
-                .apply()
-
-            true
-        } catch (_: Exception) {
-            false
-        } finally {
-            connection.disconnect()
-        }
+        return false
     }
 
     fun applyCurrentSchedule(context: Context) {
