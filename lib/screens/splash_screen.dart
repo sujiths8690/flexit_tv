@@ -1,6 +1,3 @@
-// lib/screens/splash_screen.dart
-import 'dart:ui' as ui;
-
 import 'package:flutter/material.dart';
 import '../services/device_service.dart';
 import 'root_screen.dart';
@@ -72,6 +69,18 @@ class _SplashScreenState extends State<SplashScreen>
 class _LightFlexitIntro extends StatelessWidget {
   final Animation<double> animation;
   static const _letters = ['f', 'l', 'e', 'x', 'i', 't'];
+  static const _flickerFrames = [
+    [true, false, false, true, false, false],
+    [false, true, false, false, false, true],
+    [true, false, true, false, true, false],
+    [false, false, true, true, false, false],
+    [true, true, false, false, true, false],
+    [false, true, true, false, false, true],
+    [true, false, false, true, true, false],
+    [false, true, false, true, false, true],
+    [true, false, true, true, false, false],
+    [false, true, true, false, true, true],
+  ];
 
   const _LightFlexitIntro({required this.animation});
 
@@ -81,48 +90,32 @@ class _LightFlexitIntro extends StatelessWidget {
       animation: animation,
       builder: (context, _) {
         final t = animation.value;
-        final join = Curves.easeInOutCubic.transform(
-          ((t - 0.04) / 0.58).clamp(0.0, 1.0),
-        );
+        final showAll = t >= 0.76;
+        final frameIndex = (t * 22).floor() % _flickerFrames.length;
+        final visibleFrame = _flickerFrames[frameIndex];
 
         return LayoutBuilder(
           builder: (context, constraints) {
             final size = Size(constraints.maxWidth, constraints.maxHeight);
             final shortest = size.shortestSide;
             final fontSize = (shortest * 0.065).clamp(26.0, 42.0);
-            final finalGap = (size.width * 0.03).clamp(20.0, 38.0);
-            final totalWidth = finalGap * (_letters.length - 1);
-            final firstFinalX = (size.width - totalWidth) / 2;
-            final centerY = size.height / 2;
-            final initialXs = <double>[
-              size.width * 0.09,
-              size.width * 0.25,
-              size.width * 0.42,
-              size.width * 0.58,
-              size.width * 0.74,
-              size.width * 0.91,
-            ];
 
             return ColoredBox(
               color: Colors.black,
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  for (var i = 0; i < _letters.length; i++)
-                    _IntroLetter(
-                      letter: _letters[i],
-                      x: ui.lerpDouble(
-                        initialXs[i],
-                        firstFinalX + finalGap * i,
-                        join,
-                      )!,
-                      y: centerY,
-                      fontSize: fontSize,
-                      opacity: Curves.easeOut.transform(
-                        ((t - 0.02) / 0.22).clamp(0.0, 1.0),
-                      ),
-                    ),
-                ],
+              child: Center(
+                child: RepaintBoundary(
+                  child: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      for (var i = 0; i < _letters.length; i++)
+                        _IntroLetter(
+                          letter: _letters[i],
+                          fontSize: fontSize,
+                          visible: showAll || visibleFrame[i],
+                        ),
+                    ],
+                  ),
+                ),
               ),
             );
           },
@@ -134,26 +127,23 @@ class _LightFlexitIntro extends StatelessWidget {
 
 class _IntroLetter extends StatelessWidget {
   final String letter;
-  final double x;
-  final double y;
   final double fontSize;
-  final double opacity;
+  final bool visible;
 
   const _IntroLetter({
     required this.letter,
-    required this.x,
-    required this.y,
     required this.fontSize,
-    required this.opacity,
+    required this.visible,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Positioned(
-      left: x - fontSize * 0.25,
-      top: y - fontSize * 0.58,
-      child: Opacity(
-        opacity: opacity,
+    return SizedBox(
+      width: fontSize * 0.62,
+      child: AnimatedOpacity(
+        opacity: visible ? 1 : 0,
+        duration: const Duration(milliseconds: 90),
+        curve: Curves.easeOut,
         child: Text(
           letter,
           textAlign: TextAlign.center,
