@@ -99,6 +99,7 @@ class _RootScreenState extends State<RootScreen> {
         configStatus: service.configStatus,
         backendEndpoint: service.backendEndpoint,
         realtimeEndpoint: service.realtimeEndpoint,
+        deviceInfo: service.deviceInfo,
       );
     }
 

@@ -7,7 +7,9 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:math';
 
+import 'package:flutter/services.dart';
 import 'package:flutter/widgets.dart';
+import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
@@ -16,6 +18,8 @@ import '../models/models.dart';
 class DeviceService extends ChangeNotifier with WidgetsBindingObserver {
   static const String _baseUrl = 'http://192.168.29.184:4000';
   static const String _wsUrl = 'ws://192.168.29.184:4000/realtime-ws';
+  static const MethodChannel _deviceInfoChannel =
+      MethodChannel('com.flexit.display/device_info');
   static const String _menuConfigCachePrefix = 'cached_menu_config_';
   static const Duration _socketReadyTimeout = Duration(seconds: 3);
   static const Duration _reconnectDelay = Duration(seconds: 5);
@@ -33,6 +37,8 @@ class DeviceService extends ChangeNotifier with WidgetsBindingObserver {
   Timer? _pingTimer;
   int _socketGeneration = 0;
   String _realtimeStatus = 'connecting';
+  Map<String, dynamic> _deviceInfo = const {};
+  bool _isReportingDeviceInfo = false;
   bool _disposed = false;
   bool _isObservingLifecycle = false;
 
@@ -45,12 +51,14 @@ class DeviceService extends ChangeNotifier with WidgetsBindingObserver {
   String get configStatus => _configStatus;
   String get backendEndpoint => _baseUrl;
   String get realtimeEndpoint => _wsUrl;
+  Map<String, dynamic> get deviceInfo => _deviceInfo;
 
   Future<void> initialize() async {
     _ensureLifecycleObserver();
 
     try {
       _deviceCode = await _loadOrCreateDeviceCode();
+      _deviceInfo = await _loadDeviceInfo();
       _config = await _loadCachedMenuConfig() ?? _unpairedConfig();
       if (_config?.isPaired == true) {
         _hasEverPaired = true;
@@ -58,16 +66,19 @@ class DeviceService extends ChangeNotifier with WidgetsBindingObserver {
       _isLoading = false;
       _error = null;
       notifyListeners();
+      unawaited(_reportDeviceInfoToBackend());
 
       _connectRealtime();
     } catch (_) {
       if (!_isDeviceCodeReady) {
         _deviceCode = _generateDeviceCode();
       }
+      _deviceInfo = await _loadDeviceInfo();
       _config = _unpairedConfig();
       _isLoading = false;
       _error = null;
       notifyListeners();
+      unawaited(_reportDeviceInfoToBackend());
       _connectRealtime();
     }
   }
@@ -105,6 +116,40 @@ class DeviceService extends ChangeNotifier with WidgetsBindingObserver {
     return List.generate(12, (_) => chars[rand.nextInt(chars.length)]).join();
   }
 
+  Future<Map<String, dynamic>> _loadDeviceInfo() async {
+    try {
+      final info = await _deviceInfoChannel.invokeMapMethod<String, dynamic>(
+        'getDeviceInfo',
+      );
+      return Map<String, dynamic>.from(info ?? const {});
+    } catch (_) {
+      return const {};
+    }
+  }
+
+  Future<void> _reportDeviceInfoToBackend() async {
+    if (_isReportingDeviceInfo || _deviceInfo.isEmpty) return;
+    if (!_isDeviceCodeReady) return;
+
+    _isReportingDeviceInfo = true;
+    try {
+      final endpoint = Uri.parse(
+        '$_baseUrl/api/content/device/${Uri.encodeComponent(_deviceCode.trim().toUpperCase())}/metadata',
+      );
+      await http
+          .post(
+            endpoint,
+            headers: {'Content-Type': 'application/json'},
+            body: jsonEncode({'deviceInfo': _deviceInfo}),
+          )
+          .timeout(const Duration(seconds: 5));
+    } catch (_) {
+      // Best-effort metadata sync. Display pairing/config must never depend on it.
+    } finally {
+      _isReportingDeviceInfo = false;
+    }
+  }
+
   void _connectRealtime() {
     if (_disposed) return;
     final generation = ++_socketGeneration;
@@ -135,6 +180,7 @@ class DeviceService extends ChangeNotifier with WidgetsBindingObserver {
       _configStatus = 'requesting websocket config';
       notifyListeners();
       _startPing();
+      unawaited(_reportDeviceInfoToBackend());
       _requestConfigOverRealtime();
 
       _socketSubscription = socket.stream.listen(
@@ -240,6 +286,7 @@ class DeviceService extends ChangeNotifier with WidgetsBindingObserver {
 
       if (type == 'DEVICE_WS_CONNECTED') {
         _configStatus = 'websocket connected';
+        unawaited(_reportDeviceInfoToBackend());
         _requestConfigOverRealtime();
         notifyListeners();
         return;
@@ -287,6 +334,9 @@ class DeviceService extends ChangeNotifier with WidgetsBindingObserver {
         _isLoading = false;
         _error = null;
         notifyListeners();
+        if (_config?.isPaired == true) {
+          unawaited(_reportDeviceInfoToBackend());
+        }
       }
     } catch (_) {
       // Ignore malformed realtime payloads so one bad message does not blank TV.

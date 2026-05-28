@@ -18,6 +18,7 @@ class QrPairingScreen extends StatefulWidget {
   final String configStatus;
   final String backendEndpoint;
   final String realtimeEndpoint;
+  final Map<String, dynamic> deviceInfo;
   const QrPairingScreen({
     super.key,
     required this.deviceCode,
@@ -25,6 +26,7 @@ class QrPairingScreen extends StatefulWidget {
     required this.configStatus,
     required this.backendEndpoint,
     required this.realtimeEndpoint,
+    required this.deviceInfo,
   });
 
   @override
@@ -348,6 +350,12 @@ class _QrPairingScreenState extends State<QrPairingScreen>
       'deviceCode': widget.deviceCode,
       'app': 'flexit',
       'version': 1,
+      'deviceInfo': {
+        ...widget.deviceInfo,
+        'screenWidth': MediaQuery.of(context).size.width.round(),
+        'screenHeight': MediaQuery.of(context).size.height.round(),
+        'screenPixelRatio': MediaQuery.of(context).devicePixelRatio,
+      },
     });
   }
 }
