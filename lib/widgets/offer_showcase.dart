@@ -333,9 +333,9 @@ class _FreeOfferPoster extends StatelessWidget {
     final textTop = isWidePoster ? height * 0.325 : height * 0.355;
     final headlineHeight = height * 0.225;
     final topImageSize =
-        (isWidePoster ? height * 0.32 : height * 0.34).clamp(220.0, 390.0);
+        (isWidePoster ? height * 0.28 : height * 0.34).clamp(200.0, 340.0);
     final bottomImageSize =
-        (isWidePoster ? height * 0.34 : height * 0.36).clamp(230.0, 420.0);
+        (isWidePoster ? height * 0.30 : height * 0.36).clamp(210.0, 360.0);
 
     return Container(
       color: const Color(0xFF281C42),
@@ -377,8 +377,8 @@ class _FreeOfferPoster extends StatelessWidget {
                   ),
                   if (isWidePoster)
                     Positioned(
-                      top: height * 0.015,
-                      left: (width - topImageSize) / 2,
+                      top: (height - topImageSize) / 2,
+                      left: width * 0.025,
                       width: topImageSize,
                       height: topImageSize,
                       child: _PosterFoodImage(
@@ -401,8 +401,8 @@ class _FreeOfferPoster extends StatelessWidget {
                     ),
                   if (isWidePoster)
                     Positioned(
-                      left: (width - bottomImageSize) / 2,
-                      bottom: -height * 0.025,
+                      top: (height - bottomImageSize) / 2,
+                      right: width * 0.025,
                       width: bottomImageSize,
                       height: bottomImageSize,
                       child: _PosterFoodImage(
