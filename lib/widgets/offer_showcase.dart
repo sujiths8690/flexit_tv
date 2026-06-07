@@ -1,9 +1,21 @@
+import 'dart:math';
+
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import '../core/app_environment.dart';
 import '../models/models.dart';
 import '../theme/app_theme.dart';
+
+class _PremiumTokens {
+  static const Color bgDeep = Color(0xFF0D0A08);
+  static const Color bgMid = Color(0xFF1A1410);
+  static const Color goldPrimary = Color(0xFFD4A855);
+  static const Color goldLight = Color(0xFFF0C878);
+  static const Color goldDim = Color(0xFF8C6E35);
+  static const Color textMuted = Color(0xFFB0A898);
+}
 
 class OfferShowcase extends StatelessWidget {
   final List<MenuItem> offers;
@@ -96,7 +108,6 @@ class OfferShowcase extends StatelessWidget {
         showPrice: showPrice,
         showProductImage: showProductImage,
         displayLanguage: displayLanguage,
-        businessName: businessName,
         businessLogoUrl: businessLogoUrl,
       ),
     );
@@ -143,7 +154,6 @@ class _OfferFeature extends StatelessWidget {
   final bool showPrice;
   final bool showProductImage;
   final String displayLanguage;
-  final String? businessName;
   final String? businessLogoUrl;
 
   const _OfferFeature({
@@ -158,7 +168,6 @@ class _OfferFeature extends StatelessWidget {
     required this.showPrice,
     required this.showProductImage,
     required this.displayLanguage,
-    required this.businessName,
     required this.businessLogoUrl,
   });
 
@@ -174,98 +183,216 @@ class _OfferFeature extends StatelessWidget {
         nameFontScale: nameFontScale,
         priceFontScale: priceFontScale,
         displayLanguage: displayLanguage,
+        businessLogoUrl: businessLogoUrl,
       );
     }
 
-    final width = screenSize.width;
-    final sideInset = (width * 0.048).clamp(30.0, 78.0);
-    final topInset = (screenSize.height * 0.036).clamp(22.0, 46.0);
-    final titleSize = ((width * 0.044) * nameFontScale).clamp(34.0, 74.0);
-    final headingSize = ((width * 0.026) * headingFontScale).clamp(22.0, 44.0);
-    const offerAccent = Color(0xFFE32121);
+    return _PremiumDiscountOffer(
+      offer: offer,
+      theme: theme,
+      screenSize: screenSize,
+      headingFontScale: headingFontScale,
+      nameFontScale: nameFontScale,
+      priceFontScale: priceFontScale,
+      showPrice: showPrice,
+      showProductImage: showProductImage,
+      displayLanguage: displayLanguage,
+      businessLogoUrl: businessLogoUrl,
+    );
+  }
+}
 
-    return DecoratedBox(
-      decoration: const BoxDecoration(color: Color(0xFF08090D)),
-      child: SafeArea(
-        child: CustomPaint(
-          painter: const _DottedGridPainter(),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Padding(
-                padding: EdgeInsets.fromLTRB(sideInset, topInset, sideInset, 0),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        _offerLocalized(displayLanguage, 'discountOffer'),
-                        style: GoogleFonts.dmSans(
-                          color: offerAccent,
-                          fontSize: headingSize,
-                          fontWeight: FontWeight.w800,
-                          letterSpacing: 0,
-                        ),
-                      ),
-                    ),
-                    _BusinessLogo(
-                      logoUrl: businessLogoUrl,
-                      businessName: businessName,
-                      size: (width * 0.046).clamp(46.0, 78.0),
-                    ),
-                  ],
-                ),
-              ),
-              Padding(
-                padding: EdgeInsets.fromLTRB(sideInset, 8, sideInset, 0),
-                child: Text(
-                  offer.name,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: GoogleFonts.playfairDisplay(
-                    color: Colors.white,
-                    fontSize: titleSize,
-                    fontWeight: FontWeight.w800,
-                    height: 0.96,
-                  ),
-                ),
-              ),
-              if (offer.description?.isNotEmpty == true) ...[
-                Padding(
-                  padding: EdgeInsets.fromLTRB(sideInset, 8, sideInset, 0),
-                  child: Text(
-                    offer.description!,
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
-                    style: GoogleFonts.dmSans(
-                      color: const Color(0xFFB9BBC6),
-                      fontSize: headingSize * 0.66,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-              ],
-              Expanded(
-                child: Padding(
-                  padding: EdgeInsets.fromLTRB(
-                    sideInset,
-                    (screenSize.height * 0.032).clamp(18.0, 34.0),
-                    sideInset,
-                    topInset,
-                  ),
-                  child: _OfferItemGrid(
-                    items: offer.comboItems,
-                    offerType: offer.offerType ?? 'discount',
-                    showPrice: showPrice,
-                    showProductImage: showProductImage,
-                    priceFontScale: priceFontScale,
-                    theme: theme,
-                  ),
-                ),
-              ),
-            ],
+class _PremiumDiscountOffer extends StatelessWidget {
+  final MenuItem offer;
+  final TvMenuThemeData theme;
+  final Size screenSize;
+  final double headingFontScale;
+  final double nameFontScale;
+  final double priceFontScale;
+  final bool showPrice;
+  final bool showProductImage;
+  final String displayLanguage;
+  final String? businessLogoUrl;
+
+  const _PremiumDiscountOffer({
+    required this.offer,
+    required this.theme,
+    required this.screenSize,
+    required this.headingFontScale,
+    required this.nameFontScale,
+    required this.priceFontScale,
+    required this.showPrice,
+    required this.showProductImage,
+    required this.displayLanguage,
+    required this.businessLogoUrl,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final logoSize = (screenSize.width * 0.056).clamp(48.0, 88.0);
+    final sideInset = (screenSize.width * 0.055).clamp(28.0, 72.0);
+    final topInset = (screenSize.height * 0.032).clamp(18.0, 40.0);
+    final bottomInset = (screenSize.height * 0.036).clamp(20.0, 44.0);
+
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        const Positioned.fill(child: _PremiumBackground()),
+        Positioned(
+          top: topInset,
+          right: sideInset,
+          child: _PremiumBusinessLogo(
+            logoUrl: businessLogoUrl,
+            size: logoSize,
           ),
         ),
-      ),
+        SafeArea(
+          child: Padding(
+            padding: EdgeInsets.fromLTRB(
+                sideInset, topInset, sideInset, bottomInset),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                return _PremiumLayout(
+                  constraints: constraints,
+                  offer: offer,
+                  screenSize: screenSize,
+                  headingFontScale: headingFontScale,
+                  nameFontScale: nameFontScale,
+                  priceFontScale: priceFontScale,
+                  showPrice: showPrice,
+                  showProductImage: showProductImage,
+                  displayLanguage: displayLanguage,
+                  theme: theme,
+                );
+              },
+            ),
+          ),
+        ),
+        const Positioned.fill(
+          child: IgnorePointer(
+            child: CustomPaint(painter: _PremiumOverlayPainter()),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _PremiumLayout extends StatelessWidget {
+  final BoxConstraints constraints;
+  final MenuItem offer;
+  final Size screenSize;
+  final double headingFontScale;
+  final double nameFontScale;
+  final double priceFontScale;
+  final bool showPrice;
+  final bool showProductImage;
+  final String displayLanguage;
+  final TvMenuThemeData theme;
+
+  const _PremiumLayout({
+    required this.constraints,
+    required this.offer,
+    required this.screenSize,
+    required this.headingFontScale,
+    required this.nameFontScale,
+    required this.priceFontScale,
+    required this.showPrice,
+    required this.showProductImage,
+    required this.displayLanguage,
+    required this.theme,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final cw = constraints.maxWidth;
+    final ch = constraints.maxHeight;
+    final isCompact = ch < 620;
+    final isPortraitPoster = ch > cw * 1.18;
+
+    final eyebrowSize = ((cw * 0.022) * headingFontScale).clamp(11.0, 20.0);
+    final titleSize =
+        ((cw * 0.082) * nameFontScale).clamp(32.0, isCompact ? 70.0 : 112.0);
+    final taglineSize = isPortraitPoster
+        ? ((cw * 0.052) * headingFontScale).clamp(30.0, 66.0)
+        : ((cw * 0.034) * headingFontScale)
+            .clamp(16.0, isCompact ? 32.0 : 50.0);
+    final footerSize =
+        ((cw * 0.018) * headingFontScale).clamp(11.0, isCompact ? 20.0 : 28.0);
+
+    final footerGap = (ch * 0.010).clamp(4.0, 14.0);
+
+    const eyebrowTop = 0.0;
+    final eyebrowH = eyebrowSize * 2.2;
+    final dividerTop = eyebrowTop + eyebrowH + (isCompact ? 4.0 : 8.0);
+    const dividerH = 1.0;
+    final titleTop = dividerTop + dividerH + (isCompact ? 8.0 : 14.0);
+    final titleH = titleSize * 1.06;
+    final defaultTagTop = titleTop + titleH + (isCompact ? 6.0 : 12.0);
+    final tagTop =
+        isPortraitPoster ? max(defaultTagTop, ch * 0.245) : defaultTagTop;
+    final tagH = taglineSize * 1.12;
+    final listTop = tagTop + tagH + (isCompact ? 12.0 : 24.0);
+    final footerH = footerSize * 1.2;
+    final listBottom = footerH + footerGap;
+
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        Positioned(
+          top: eyebrowTop,
+          left: 0,
+          right: 0,
+          height: eyebrowH,
+          child: _EyebrowLabel(
+            fontSize: eyebrowSize,
+            language: displayLanguage,
+          ),
+        ),
+        Positioned(
+          top: dividerTop,
+          left: cw * 0.14,
+          right: cw * 0.14,
+          height: dividerH,
+          child: CustomPaint(painter: _GoldDividerPainter()),
+        ),
+        Positioned(
+          top: titleTop,
+          left: cw * 0.06,
+          right: cw * 0.06,
+          height: titleH,
+          child: _GoldTitleText(text: offer.name, fontSize: titleSize),
+        ),
+        Positioned(
+          top: tagTop,
+          left: 0,
+          right: 0,
+          height: tagH,
+          child: _TaglineText(fontSize: taglineSize, language: displayLanguage),
+        ),
+        Positioned(
+          left: 0,
+          right: 0,
+          top: listTop,
+          bottom: listBottom,
+          child: _DiscountOfferProductGrid(
+            offer: offer,
+            maxWidth: cw * 0.92,
+            showProductImage: showProductImage,
+            showPrice: showPrice,
+          ),
+        ),
+        Positioned(
+          left: 0,
+          right: 0,
+          bottom: 0,
+          height: footerH,
+          child: _FooterTagline(
+            fontSize: footerSize,
+            language: displayLanguage,
+          ),
+        ),
+      ],
     );
   }
 }
@@ -279,6 +406,7 @@ class _FreeOfferPoster extends StatelessWidget {
   final double nameFontScale;
   final double priceFontScale;
   final String displayLanguage;
+  final String? businessLogoUrl;
 
   const _FreeOfferPoster({
     required this.offer,
@@ -289,13 +417,13 @@ class _FreeOfferPoster extends StatelessWidget {
     required this.nameFontScale,
     required this.priceFontScale,
     required this.displayLanguage,
+    required this.businessLogoUrl,
   });
 
   @override
   Widget build(BuildContext context) {
     final width = screenSize.width;
     final height = screenSize.height;
-    final isWidePoster = width / height > 1.35;
     final posterItem =
         item ?? (offer.comboItems.isNotEmpty ? offer.comboItems.first : null);
     final buyQty = posterItem?.buyQuantity ?? posterItem?.quantity ?? 1;
@@ -310,152 +438,118 @@ class _FreeOfferPoster extends StatelessWidget {
             buyQty,
             freeQty,
           );
-    final sideInset = (width * 0.055).clamp(34.0, 86.0);
-    final topInset = (height * 0.035).clamp(22.0, 46.0);
-    final titleSize = isWidePoster
-        ? ((height * 0.048) * nameFontScale).clamp(30.0, 54.0)
-        : ((width * 0.038) * nameFontScale).clamp(30.0, 64.0);
-    final offerWordSize = isWidePoster
-        ? ((height * 0.104) * priceFontScale).clamp(70.0, 116.0)
-        : ((width * 0.092) * priceFontScale).clamp(72.0, 150.0);
-    final numberSize = isWidePoster
-        ? ((height * 0.184) * priceFontScale).clamp(118.0, 202.0)
-        : ((width * 0.16) * priceFontScale).clamp(130.0, 260.0);
-    final detailSize = isWidePoster
-        ? ((height * 0.028) * headingFontScale).clamp(18.0, 30.0)
-        : ((width * 0.020) * headingFontScale).clamp(20.0, 36.0);
-    final panelTop = isWidePoster ? height * 0.285 : height * 0.31;
-    final panelBottom = isWidePoster ? height * 0.245 : height * 0.29;
-    final panelLeft = isWidePoster ? width * 0.20 : width * 0.11;
-    final panelRight = isWidePoster ? width * 0.20 : width * 0.10;
-    final textLeft = isWidePoster ? width * 0.265 : width * 0.17;
-    final textRight = isWidePoster ? width * 0.265 : width * 0.16;
-    final textTop = isWidePoster ? height * 0.325 : height * 0.355;
-    final headlineHeight = height * 0.225;
-    final topImageSize =
-        (isWidePoster ? height * 0.28 : height * 0.34).clamp(200.0, 340.0);
-    final bottomImageSize =
-        (isWidePoster ? height * 0.30 : height * 0.36).clamp(210.0, 360.0);
+    final sideInset = (width * 0.055).clamp(28.0, 78.0);
+    final topInset = (height * 0.034).clamp(20.0, 44.0);
+    final logoSize = (width * 0.052).clamp(48.0, 84.0);
+    final isWidePoster = width / height > 1.35;
+    final titleSize = ((width * 0.058) * nameFontScale)
+        .clamp(34.0, isWidePoster ? 86.0 : 72.0);
+    final detailSize = ((width * 0.022) * headingFontScale)
+        .clamp(18.0, isWidePoster ? 34.0 : 30.0);
+    final offerWordSize = ((width * 0.078) * priceFontScale)
+        .clamp(62.0, isWidePoster ? 126.0 : 112.0);
+    final numberSize = ((width * 0.145) * priceFontScale)
+        .clamp(116.0, isWidePoster ? 236.0 : 210.0);
+    final productSize =
+        (isWidePoster ? height * 0.42 : width * 0.44).clamp(170.0, 420.0);
 
-    return Container(
-      color: const Color(0xFF281C42),
-      child: SafeArea(
-        child: Padding(
-          padding:
-              EdgeInsets.fromLTRB(sideInset, topInset, sideInset, topInset),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(6),
-            child: DecoratedBox(
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    Color(0xFFFF8E1F),
-                    Color(0xFFE85C1B),
-                    Color(0xFFFFB328),
-                  ],
-                ),
-              ),
-              child: Stack(
-                fit: StackFit.expand,
-                children: [
-                  const _OfferPatternText(),
-                  Positioned.fill(
-                    top: height * 0.22,
-                    bottom: height * 0.20,
-                    child: const ColoredBox(color: Color(0xFF221B3D)),
-                  ),
-                  Positioned.fill(
-                    top: panelTop,
-                    bottom: panelBottom,
-                    left: panelLeft,
-                    right: panelRight,
-                    child: const CustomPaint(
-                      painter: _BrushPanelPainter(),
-                    ),
-                  ),
-                  if (isWidePoster)
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        const Positioned.fill(child: _PremiumBackground()),
+        Positioned(
+          top: topInset,
+          right: sideInset,
+          child: _PremiumBusinessLogo(
+            logoUrl: businessLogoUrl,
+            size: logoSize,
+          ),
+        ),
+        SafeArea(
+          child: Padding(
+            padding:
+                EdgeInsets.fromLTRB(sideInset, topInset, sideInset, topInset),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final cw = constraints.maxWidth;
+                final ch = constraints.maxHeight;
+
+                return Stack(
+                  clipBehavior: Clip.none,
+                  children: [
                     Positioned(
-                      top: (height - topImageSize) / 2,
-                      left: width * 0.025,
-                      width: topImageSize,
-                      height: topImageSize,
-                      child: _PosterFoodImage(
-                        item: posterItem,
-                        showProductImage: showProductImage,
-                        preferFreeProduct: false,
-                      ),
-                    )
-                  else
-                    Positioned(
-                      top: -height * 0.05,
-                      left: width * 0.22,
-                      right: width * 0.22,
-                      height: height * 0.34,
-                      child: _PosterFoodImage(
-                        item: posterItem,
-                        showProductImage: showProductImage,
-                        preferFreeProduct: false,
+                      top: 0,
+                      left: 0,
+                      right: logoSize + 18,
+                      child: _EyebrowLabel(
+                        fontSize:
+                            ((cw * 0.022) * headingFontScale).clamp(12.0, 22.0),
+                        language: displayLanguage,
                       ),
                     ),
-                  if (isWidePoster)
                     Positioned(
-                      top: (height - bottomImageSize) / 2,
-                      right: width * 0.025,
-                      width: bottomImageSize,
-                      height: bottomImageSize,
-                      child: _PosterFoodImage(
-                        item: posterItem,
-                        showProductImage: showProductImage,
-                        preferFreeProduct: true,
-                      ),
-                    )
-                  else
-                    Positioned(
-                      left: width * 0.20,
-                      right: width * 0.17,
-                      bottom: -height * 0.07,
-                      height: height * 0.36,
-                      child: _PosterFoodImage(
-                        item: posterItem,
-                        showProductImage: showProductImage,
-                        preferFreeProduct: true,
+                      top: ch * 0.11,
+                      left: 0,
+                      right: 0,
+                      child: _GoldTitleText(
+                        text: offer.name,
+                        fontSize: titleSize,
                       ),
                     ),
-                  Positioned(
-                    left: textLeft,
-                    right: textRight,
-                    top: textTop,
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Text(
-                          offer.name,
-                          maxLines: 1,
-                          overflow: TextOverflow.ellipsis,
-                          textAlign: TextAlign.center,
-                          style: GoogleFonts.dmSans(
-                            color: Colors.white,
-                            fontSize: titleSize,
-                            fontWeight: FontWeight.w900,
-                            letterSpacing: 0,
-                            height: 0.95,
-                          ),
+                    if (isWidePoster) ...[
+                      Positioned(
+                        top: ch * 0.34,
+                        left: 0,
+                        width: productSize,
+                        height: productSize,
+                        child: _PosterFoodImage(
+                          item: posterItem,
+                          showProductImage: showProductImage,
+                          preferFreeProduct: false,
                         ),
-                        const SizedBox(height: 12),
-                        if (isWidePoster)
-                          SizedBox(
-                            height: headlineHeight,
-                            child: _BuyGetHeadline(
-                              buyQty: buyQty,
-                              freeQty: freeQty,
-                              language: displayLanguage,
-                              offerWordSize: offerWordSize,
-                              numberSize: numberSize,
-                            ),
-                          )
-                        else
+                      ),
+                      Positioned(
+                        top: ch * 0.34,
+                        right: 0,
+                        width: productSize,
+                        height: productSize,
+                        child: _PosterFoodImage(
+                          item: posterItem,
+                          showProductImage: showProductImage,
+                          preferFreeProduct: true,
+                        ),
+                      ),
+                    ] else ...[
+                      Positioned(
+                        top: ch * 0.15,
+                        left: (cw - productSize) / 2,
+                        width: productSize,
+                        height: productSize,
+                        child: _PosterFoodImage(
+                          item: posterItem,
+                          showProductImage: showProductImage,
+                          preferFreeProduct: false,
+                        ),
+                      ),
+                      Positioned(
+                        bottom: ch * 0.02,
+                        left: (cw - productSize) / 2,
+                        width: productSize,
+                        height: productSize,
+                        child: _PosterFoodImage(
+                          item: posterItem,
+                          showProductImage: showProductImage,
+                          preferFreeProduct: true,
+                        ),
+                      ),
+                    ],
+                    Positioned(
+                      top: isWidePoster ? ch * 0.38 : ch * 0.47,
+                      left: isWidePoster ? cw * 0.28 : cw * 0.06,
+                      right: isWidePoster ? cw * 0.28 : cw * 0.06,
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
                           _BuyGetHeadline(
                             buyQty: buyQty,
                             freeQty: freeQty,
@@ -463,25 +557,734 @@ class _FreeOfferPoster extends StatelessWidget {
                             offerWordSize: offerWordSize,
                             numberSize: numberSize,
                           ),
-                        const SizedBox(height: 8),
-                        Text(
-                          offerDetail,
-                          maxLines: 2,
-                          overflow: TextOverflow.ellipsis,
-                          textAlign: TextAlign.center,
-                          style: GoogleFonts.dmSans(
-                            color: Colors.white,
+                          SizedBox(height: (ch * 0.018).clamp(8.0, 18.0)),
+                          _BuyGetDetailText(
+                            detail: offerDetail,
                             fontSize: detailSize,
-                            fontWeight: FontWeight.w800,
-                            height: 1.08,
+                            splitLines: isWidePoster,
                           ),
-                        ),
-                      ],
+                        ],
+                      ),
                     ),
-                  ),
-                ],
+                  ],
+                );
+              },
+            ),
+          ),
+        ),
+        const Positioned.fill(
+          child: IgnorePointer(
+            child: CustomPaint(painter: _PremiumOverlayPainter()),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _PremiumBackground extends StatelessWidget {
+  const _PremiumBackground();
+
+  @override
+  Widget build(BuildContext context) {
+    return const DecoratedBox(
+      decoration: BoxDecoration(
+        gradient: RadialGradient(
+          center: Alignment(0, -0.22),
+          radius: 1.22,
+          colors: [
+            Color(0xFF302018),
+            _PremiumTokens.bgMid,
+            _PremiumTokens.bgDeep,
+          ],
+          stops: [0.0, 0.46, 1.0],
+        ),
+      ),
+      child: CustomPaint(painter: _PremiumBackgroundPainter()),
+    );
+  }
+}
+
+class _PremiumBackgroundPainter extends CustomPainter {
+  const _PremiumBackgroundPainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height * 0.48);
+    final gold = Paint()
+      ..color = _PremiumTokens.goldPrimary.withValues(alpha: 0.08)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.0;
+    for (var i = 0; i < 8; i++) {
+      canvas.drawCircle(center, size.shortestSide * (0.12 + i * 0.07), gold);
+    }
+
+    final linePaint = Paint()
+      ..color = _PremiumTokens.goldPrimary.withValues(alpha: 0.05)
+      ..strokeWidth = 1;
+    for (var x = -size.height; x < size.width; x += 42) {
+      canvas.drawLine(
+          Offset(x, 0), Offset(x + size.height, size.height), linePaint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+class _PremiumOverlayPainter extends CustomPainter {
+  const _PremiumOverlayPainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final vignette = Paint()
+      ..shader = RadialGradient(
+        center: Alignment.center,
+        radius: 0.92,
+        colors: [
+          Colors.transparent,
+          Colors.black.withValues(alpha: 0.34),
+        ],
+      ).createShader(Offset.zero & size);
+    canvas.drawRect(Offset.zero & size, vignette);
+
+    final corner = Paint()
+      ..color = _PremiumTokens.goldPrimary.withValues(alpha: 0.42)
+      ..strokeWidth = 2
+      ..style = PaintingStyle.stroke;
+    const length = 58.0;
+    const inset = 18.0;
+    canvas
+      ..drawLine(const Offset(inset, inset),
+          const Offset(inset + length, inset), corner)
+      ..drawLine(const Offset(inset, inset),
+          const Offset(inset, inset + length), corner)
+      ..drawLine(Offset(size.width - inset, inset),
+          Offset(size.width - inset - length, inset), corner)
+      ..drawLine(Offset(size.width - inset, inset),
+          Offset(size.width - inset, inset + length), corner)
+      ..drawLine(Offset(inset, size.height - inset),
+          Offset(inset + length, size.height - inset), corner)
+      ..drawLine(Offset(inset, size.height - inset),
+          Offset(inset, size.height - inset - length), corner)
+      ..drawLine(Offset(size.width - inset, size.height - inset),
+          Offset(size.width - inset - length, size.height - inset), corner)
+      ..drawLine(Offset(size.width - inset, size.height - inset),
+          Offset(size.width - inset, size.height - inset - length), corner);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+class _PremiumBusinessLogo extends StatelessWidget {
+  final String? logoUrl;
+  final double size;
+
+  const _PremiumBusinessLogo({
+    required this.logoUrl,
+    required this.size,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final imageUrl = _absoluteImageUrl(logoUrl);
+    if (imageUrl == null) return const SizedBox.shrink();
+
+    return Container(
+      width: size,
+      height: size,
+      padding: const EdgeInsets.all(3),
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        border: Border.all(color: _PremiumTokens.goldPrimary, width: 1.2),
+        boxShadow: [
+          BoxShadow(
+            color: _PremiumTokens.goldPrimary.withValues(alpha: 0.22),
+            blurRadius: 18,
+          ),
+        ],
+      ),
+      child: ClipOval(
+        child: CachedNetworkImage(
+          imageUrl: imageUrl,
+          fit: BoxFit.cover,
+          errorWidget: (_, __, ___) => const SizedBox.shrink(),
+        ),
+      ),
+    );
+  }
+}
+
+class _EyebrowLabel extends StatelessWidget {
+  final double fontSize;
+  final String language;
+
+  const _EyebrowLabel({required this.fontSize, required this.language});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        _TinyDiamond(size: fontSize * 0.55),
+        SizedBox(width: fontSize * 0.55),
+        Text(
+          _comboLocalized(language, 'eyebrow'),
+          style: GoogleFonts.cormorantGaramond(
+            color: _PremiumTokens.goldPrimary,
+            fontSize: fontSize,
+            fontWeight: FontWeight.w600,
+            letterSpacing: fontSize * 0.30,
+            height: 1,
+          ),
+        ),
+        SizedBox(width: fontSize * 0.55),
+        _TinyDiamond(size: fontSize * 0.55),
+      ],
+    );
+  }
+}
+
+class _TinyDiamond extends StatelessWidget {
+  final double size;
+
+  const _TinyDiamond({required this.size});
+
+  @override
+  Widget build(BuildContext context) {
+    return Transform.rotate(
+      angle: pi / 4,
+      child: SizedBox(
+        width: size,
+        height: size,
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            border: Border.all(color: _PremiumTokens.goldPrimary, width: 1.0),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _GoldDividerPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..shader = LinearGradient(
+        colors: [
+          _PremiumTokens.goldPrimary.withValues(alpha: 0.0),
+          _PremiumTokens.goldPrimary.withValues(alpha: 0.65),
+          _PremiumTokens.goldPrimary,
+          _PremiumTokens.goldPrimary.withValues(alpha: 0.65),
+          _PremiumTokens.goldPrimary.withValues(alpha: 0.0),
+        ],
+        stops: const [0.0, 0.2, 0.5, 0.8, 1.0],
+      ).createShader(Offset.zero & size)
+      ..strokeWidth = 0.8
+      ..style = PaintingStyle.stroke;
+    canvas.drawLine(
+      Offset(0, size.height / 2),
+      Offset(size.width, size.height / 2),
+      paint,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+class _GoldTitleText extends StatelessWidget {
+  final String text;
+  final double fontSize;
+
+  const _GoldTitleText({
+    required this.text,
+    required this.fontSize,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return FittedBox(
+      fit: BoxFit.scaleDown,
+      child: SizedBox(
+        width: 980,
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            Text(
+              text.toUpperCase(),
+              maxLines: 2,
+              textAlign: TextAlign.center,
+              overflow: TextOverflow.ellipsis,
+              style: GoogleFonts.cormorantGaramond(
+                color: Colors.black.withValues(alpha: 0.60),
+                fontSize: fontSize,
+                fontWeight: FontWeight.w700,
+                height: 0.88,
+                letterSpacing: fontSize * 0.025,
               ),
             ),
+            Transform.translate(
+              offset: Offset(-fontSize * 0.025, -fontSize * 0.032),
+              child: ShaderMask(
+                shaderCallback: (bounds) => const LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Color(0xFFF5D98A),
+                    Color(0xFFD4A855),
+                    Color(0xFFB8882E),
+                    Color(0xFFD4A855),
+                  ],
+                  stops: [0.0, 0.35, 0.65, 1.0],
+                ).createShader(bounds),
+                child: Text(
+                  text.toUpperCase(),
+                  maxLines: 2,
+                  textAlign: TextAlign.center,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.cormorantGaramond(
+                    color: Colors.white,
+                    fontSize: fontSize,
+                    fontWeight: FontWeight.w700,
+                    height: 0.88,
+                    letterSpacing: fontSize * 0.025,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _TaglineText extends StatelessWidget {
+  final double fontSize;
+  final String language;
+
+  const _TaglineText({required this.fontSize, required this.language});
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      _comboLocalized(language, 'todaysBestDeal'),
+      textAlign: TextAlign.center,
+      style: GoogleFonts.playfairDisplay(
+        color: _PremiumTokens.textMuted,
+        fontSize: fontSize,
+        fontStyle: FontStyle.italic,
+        fontWeight: FontWeight.w500,
+        height: 1,
+        letterSpacing: 0.5,
+        shadows: const [
+          Shadow(
+            color: Color(0x66000000),
+            offset: Offset(0, 3),
+            blurRadius: 6,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PremiumHeroDish extends StatelessWidget {
+  final String? imageUrl;
+  final double size;
+  final bool showProductImage;
+
+  const _PremiumHeroDish({
+    required this.imageUrl,
+    required this.size,
+    required this.showProductImage,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: size,
+      height: size,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          // Positioned(
+          //   bottom: size * 0.05,
+          //   child: Container(
+          //     width: size * 0.62,
+          //     height: size * 0.12,
+          //     decoration: BoxDecoration(
+          //       color: Colors.transparent,
+          //       borderRadius: BorderRadius.circular(size),
+          //       boxShadow: [
+          //         BoxShadow(
+          //           color: _PremiumTokens.goldPrimary.withValues(alpha: 0.20),
+          //           blurRadius: 38,
+          //           spreadRadius: 10,
+          //         ),
+          //       ],
+          //     ),
+          //   ),
+          // ),
+          Positioned(
+            top: size * 0.04,
+            child: CustomPaint(
+              size: Size(size * 0.86, size * 0.86),
+              painter: _RingOrnamentPainter(),
+            ),
+          ),
+          Positioned(
+            top: size * 0.04,
+            left: size * 0.04,
+            right: size * 0.04,
+            bottom: size * 0.04,
+            child: !showProductImage || imageUrl == null
+                ? const _PremiumImageFallback(label: 'COMBO')
+                : ClipOval(
+                    child: CachedNetworkImage(
+                      imageUrl: imageUrl!,
+                      fit: BoxFit.cover,
+                      placeholder: (_, __) =>
+                          const _PremiumImageFallback(label: 'COMBO'),
+                      errorWidget: (_, __, ___) =>
+                          const _PremiumImageFallback(label: 'COMBO'),
+                    ),
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _RingOrnamentPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = size.shortestSide * 0.49;
+    final paint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.0;
+    paint.color = _PremiumTokens.goldPrimary.withValues(alpha: 0.18);
+    canvas.drawCircle(center, radius, paint);
+    paint.color = _PremiumTokens.goldPrimary.withValues(alpha: 0.10);
+    paint.strokeWidth = 0.6;
+    canvas.drawCircle(center, radius * 0.84, paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
+
+class _DiscountOfferProductGrid extends StatelessWidget {
+  final MenuItem offer;
+  final double maxWidth;
+  final bool showProductImage;
+  final bool showPrice;
+
+  const _DiscountOfferProductGrid({
+    required this.offer,
+    required this.maxWidth,
+    required this.showProductImage,
+    required this.showPrice,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final items = offer.comboItems;
+
+    return Center(
+      child: ConstrainedBox(
+        constraints: BoxConstraints(maxWidth: maxWidth),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final gap = (constraints.maxWidth * 0.025).clamp(14.0, 28.0);
+            final tileWidth = constraints.maxWidth;
+            final tileHeight =
+                (constraints.maxWidth * 0.20).clamp(170.0, 320.0);
+            final offerItems = items.isEmpty ? <ComboOfferItem>[] : items;
+
+            return SingleChildScrollView(
+              physics: const NeverScrollableScrollPhysics(),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: items.isEmpty
+                    ? [
+                        _DiscountOfferSingleTile(
+                          offer: offer,
+                          width: tileWidth,
+                          height: tileHeight,
+                          showProductImage: showProductImage,
+                          showPrice: showPrice,
+                        ),
+                      ]
+                    : [
+                        for (var i = 0; i < offerItems.length; i++) ...[
+                          _DiscountOfferItemTile(
+                            item: offerItems[i],
+                            width: tileWidth,
+                            height: tileHeight,
+                            imageOnLeft: i.isEven,
+                            showProductImage: showProductImage,
+                            showPrice: showPrice,
+                          ),
+                          if (i != offerItems.length - 1) SizedBox(height: gap),
+                        ],
+                      ],
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+}
+
+class _DiscountOfferItemTile extends StatelessWidget {
+  final ComboOfferItem item;
+  final double width;
+  final double height;
+  final bool imageOnLeft;
+  final bool showProductImage;
+  final bool showPrice;
+
+  const _DiscountOfferItemTile({
+    required this.item,
+    required this.width,
+    required this.height,
+    required this.imageOnLeft,
+    required this.showProductImage,
+    required this.showPrice,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return _DiscountOfferTileShell(
+      width: width,
+      height: height,
+      name: item.product.name,
+      imageUrl: _absoluteImageUrl(item.product.imageUrl),
+      mainPrice: _comboItemOriginalUnitPrice(item),
+      offerPrice: _comboItemUnitPrice(item),
+      imageOnLeft: imageOnLeft,
+      showProductImage: showProductImage,
+      showPrice: showPrice,
+    );
+  }
+}
+
+class _DiscountOfferSingleTile extends StatelessWidget {
+  final MenuItem offer;
+  final double width;
+  final double height;
+  final bool showProductImage;
+  final bool showPrice;
+
+  const _DiscountOfferSingleTile({
+    required this.offer,
+    required this.width,
+    required this.height,
+    required this.showProductImage,
+    required this.showPrice,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return _DiscountOfferTileShell(
+      width: width,
+      height: height,
+      name: offer.name,
+      imageUrl: _absoluteImageUrl(offer.imageUrl),
+      mainPrice: offer.originalPrice ?? offer.price,
+      offerPrice: offer.price,
+      imageOnLeft: true,
+      showProductImage: showProductImage,
+      showPrice: showPrice,
+    );
+  }
+}
+
+class _DiscountOfferTileShell extends StatelessWidget {
+  final double width;
+  final double height;
+  final String name;
+  final String? imageUrl;
+  final double mainPrice;
+  final double offerPrice;
+  final bool imageOnLeft;
+  final bool showProductImage;
+  final bool showPrice;
+
+  const _DiscountOfferTileShell({
+    required this.width,
+    required this.height,
+    required this.name,
+    required this.imageUrl,
+    required this.mainPrice,
+    required this.offerPrice,
+    required this.imageOnLeft,
+    required this.showProductImage,
+    required this.showPrice,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final canShowImage = showProductImage && imageUrl != null;
+    final imageSide = canShowImage ? min(height * 0.84, width * 0.26) : 0.0;
+    final nameSize = (width * 0.045).clamp(28.0, 58.0);
+    final mainPriceSize = (width * 0.024).clamp(18.0, 34.0);
+    final offerPriceSize = (width * 0.038).clamp(28.0, 52.0);
+    final imageGap = (width * 0.035).clamp(22.0, 44.0);
+    final imageBlock = canShowImage
+        ? SizedBox(
+            width: imageSide,
+            height: imageSide,
+            child: ClipOval(
+              child: CachedNetworkImage(
+                imageUrl: imageUrl!,
+                fit: BoxFit.cover,
+                placeholder: (_, __) => const SizedBox.shrink(),
+                errorWidget: (_, __, ___) => const SizedBox.shrink(),
+              ),
+            ),
+          )
+        : const SizedBox.shrink();
+    final textBlock = Expanded(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment:
+            imageOnLeft ? CrossAxisAlignment.start : CrossAxisAlignment.end,
+        children: [
+          Text(
+            name.toUpperCase(),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
+            textAlign: imageOnLeft ? TextAlign.left : TextAlign.right,
+            style: GoogleFonts.cormorantGaramond(
+              color: _PremiumTokens.goldLight,
+              fontSize: nameSize,
+              fontWeight: FontWeight.w800,
+              height: 0.95,
+              letterSpacing: 0,
+            ),
+          ),
+          if (showPrice) ...[
+            SizedBox(height: (width * 0.010).clamp(8.0, 16.0)),
+            Text(
+              'Rs ${mainPrice.toStringAsFixed(0)}',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              style: GoogleFonts.nunito(
+                color: Colors.white54,
+                decoration: TextDecoration.lineThrough,
+                decorationColor: Colors.white54,
+                fontSize: mainPriceSize,
+                fontWeight: FontWeight.w800,
+                height: 1,
+              ),
+            ),
+            SizedBox(height: (width * 0.004).clamp(3.0, 8.0)),
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment:
+                  imageOnLeft ? Alignment.centerLeft : Alignment.centerRight,
+              child: Text(
+                'Rs ${offerPrice.toStringAsFixed(0)}',
+                maxLines: 1,
+                style: GoogleFonts.bebasNeue(
+                  color: _PremiumTokens.goldLight,
+                  fontSize: offerPriceSize,
+                  fontWeight: FontWeight.w900,
+                  height: 0.95,
+                ),
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+
+    return SizedBox(
+      width: width,
+      height: height,
+      child: Padding(
+        padding: EdgeInsets.symmetric(
+          horizontal: (width * 0.014).clamp(12.0, 26.0),
+          vertical: (width * 0.010).clamp(8.0, 18.0),
+        ),
+        child: Row(
+          children: imageOnLeft
+              ? [
+                  if (canShowImage) imageBlock,
+                  if (canShowImage) SizedBox(width: imageGap),
+                  textBlock,
+                ]
+              : [
+                  textBlock,
+                  if (canShowImage) SizedBox(width: imageGap),
+                  if (canShowImage) imageBlock,
+                ],
+        ),
+      ),
+    );
+  }
+}
+
+class _FooterTagline extends StatelessWidget {
+  final double fontSize;
+  final String language;
+
+  const _FooterTagline({required this.fontSize, required this.language});
+
+  @override
+  Widget build(BuildContext context) {
+    return ShaderMask(
+      shaderCallback: (bounds) => const LinearGradient(
+        colors: [Color(0xFF8C6E35), Color(0xFFD4A855), Color(0xFF8C6E35)],
+        stops: [0.0, 0.5, 1.0],
+      ).createShader(bounds),
+      child: Text(
+        _comboLocalized(language, 'serveGreatness'),
+        textAlign: TextAlign.center,
+        style: GoogleFonts.cormorantGaramond(
+          color: Colors.white,
+          fontSize: fontSize,
+          fontWeight: FontWeight.w600,
+          letterSpacing: fontSize * 0.20,
+          height: 1,
+        ),
+      ),
+    );
+  }
+}
+
+class _PremiumImageFallback extends StatelessWidget {
+  final String label;
+
+  const _PremiumImageFallback({required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: _PremiumTokens.bgMid,
+        border: Border.all(
+          color: _PremiumTokens.goldDim.withValues(alpha: 0.30),
+          width: 0.8,
+        ),
+      ),
+      child: Center(
+        child: Text(
+          label,
+          style: GoogleFonts.cormorantGaramond(
+            color: _PremiumTokens.goldDim.withValues(alpha: 0.70),
+            fontSize: 14,
+            fontWeight: FontWeight.w700,
+            letterSpacing: 2,
           ),
         ),
       ),
@@ -509,26 +1312,28 @@ class _BuyGetHeadline extends StatelessWidget {
     final isMalayalam = _isMalayalam(language);
     final textStyle = isMalayalam
         ? GoogleFonts.notoSansMalayalam(
-            color: const Color(0xFFFFC928),
+            color: _PremiumTokens.goldLight,
             fontWeight: FontWeight.w900,
             height: 0.9,
             shadows: const [
               Shadow(
-                  color: Color(0xFF260B0B),
-                  offset: Offset(4, 5),
-                  blurRadius: 0),
+                color: Color(0xFF260B0B),
+                offset: Offset(4, 5),
+                blurRadius: 0,
+              ),
             ],
           )
-        : GoogleFonts.dmSans(
-            color: const Color(0xFFFFC928),
+        : GoogleFonts.bebasNeue(
+            color: _PremiumTokens.goldLight,
             fontWeight: FontWeight.w900,
             height: 0.82,
             letterSpacing: 0,
             shadows: const [
               Shadow(
-                  color: Color(0xFF260B0B),
-                  offset: Offset(4, 5),
-                  blurRadius: 0),
+                color: Color(0xFF260B0B),
+                offset: Offset(4, 5),
+                blurRadius: 0,
+              ),
             ],
           );
 
@@ -542,19 +1347,87 @@ class _BuyGetHeadline extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
-              Text(isMalayalam ? 'വാങ്ങൂ $buyQty' : 'BUY$buyQty',
-                  style: textStyle.copyWith(fontSize: offerWordSize)),
-              Text(isMalayalam ? 'നേടൂ' : 'GET',
-                  style: textStyle.copyWith(fontSize: offerWordSize * 0.92)),
+              Text(
+                isMalayalam ? 'വാങ്ങൂ $buyQty' : 'BUY $buyQty',
+                style: textStyle.copyWith(fontSize: offerWordSize),
+              ),
+              Text(
+                isMalayalam ? 'നേടൂ' : 'GET',
+                style: textStyle.copyWith(fontSize: offerWordSize * 0.92),
+              ),
             ],
           ),
-          const SizedBox(width: 16),
+          const SizedBox(width: 18),
           Text(
             '$freeQty',
             style: textStyle.copyWith(fontSize: numberSize),
           ),
         ],
       ),
+    );
+  }
+}
+
+class _BuyGetDetailText extends StatelessWidget {
+  final String detail;
+  final double fontSize;
+  final bool splitLines;
+
+  const _BuyGetDetailText({
+    required this.detail,
+    required this.fontSize,
+    required this.splitLines,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final lines = detail
+        .split('\n')
+        .map((line) => line.trim())
+        .where((line) => line.isNotEmpty)
+        .toList();
+    final style = GoogleFonts.nunito(
+      color: _PremiumTokens.goldLight,
+      fontSize: fontSize,
+      fontWeight: FontWeight.w900,
+      height: 1.05,
+    );
+
+    if (splitLines && lines.length >= 2) {
+      return Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          SizedBox(
+            width: double.infinity,
+            child: Text(
+              lines.first,
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
+              style: style,
+            ),
+          ),
+          const SizedBox(height: 4),
+          SizedBox(
+            width: double.infinity,
+            child: Text(
+              lines.skip(1).join(' '),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+              textAlign: TextAlign.center,
+              style: style,
+            ),
+          ),
+        ],
+      );
+    }
+
+    return Text(
+      detail,
+      maxLines: 2,
+      overflow: TextOverflow.ellipsis,
+      textAlign: TextAlign.center,
+      style: style,
     );
   }
 }
@@ -575,363 +1448,23 @@ class _PosterFoodImage extends StatelessWidget {
     final product = preferFreeProduct
         ? item?.freeProduct ?? item?.product
         : item?.product ?? item?.freeProduct;
-    final imageUrl = product?.imageUrl;
+    final imageUrl = _absoluteImageUrl(product?.imageUrl);
 
-    if (showProductImage && imageUrl?.isNotEmpty == true) {
-      return ClipOval(
-        child: CachedNetworkImage(
-          imageUrl: imageUrl!,
-          fit: BoxFit.cover,
-        ),
-      );
-    }
-
-    return Container(
-      decoration: const BoxDecoration(
-        shape: BoxShape.circle,
-        color: Color(0xFF3A244A),
-      ),
-      child: const Icon(
-        Icons.restaurant_rounded,
-        color: Color(0xFFFFC928),
-        size: 96,
-      ),
-    );
-  }
-}
-
-class _OfferPatternText extends StatelessWidget {
-  const _OfferPatternText();
-
-  @override
-  Widget build(BuildContext context) {
-    return Positioned.fill(
-      child: IgnorePointer(
-        child: LayoutBuilder(
-          builder: (context, constraints) {
-            final tileWidth = (constraints.maxWidth / 4).clamp(180.0, 280.0);
-            final tileHeight = (constraints.maxHeight / 3).clamp(120.0, 190.0);
-            final columns = (constraints.maxWidth / tileWidth).ceil() + 1;
-            final rows = (constraints.maxHeight / tileHeight).ceil() + 1;
-
-            return OverflowBox(
-              maxWidth: constraints.maxWidth + tileWidth,
-              maxHeight: constraints.maxHeight + tileHeight,
-              child: Wrap(
-                spacing: 18,
-                runSpacing: 16,
-                children: [
-                  for (var index = 0; index < columns * rows; index++)
-                    SizedBox(
-                      width: tileWidth,
-                      height: tileHeight,
-                      child: Transform.rotate(
-                        angle: -0.08,
-                        child: Center(
-                          child: Text(
-                            'NEW\nOFFER',
-                            textAlign: TextAlign.center,
-                            style: GoogleFonts.dmSans(
-                              color: const Color(0x38FFD447),
-                              fontSize: tileWidth * 0.30,
-                              fontWeight: FontWeight.w900,
-                              height: 0.72,
-                              letterSpacing: 0,
-                            ),
-                          ),
-                        ),
-                      ),
-                    ),
-                ],
-              ),
-            );
-          },
-        ),
-      ),
-    );
-  }
-}
-
-class _BrushPanelPainter extends CustomPainter {
-  const _BrushPanelPainter();
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()..color = const Color(0xFFB4201F);
-    final path = Path()
-      ..moveTo(size.width * 0.04, size.height * 0.13)
-      ..lineTo(size.width * 0.24, size.height * 0.03)
-      ..lineTo(size.width * 0.62, size.height * 0.06)
-      ..lineTo(size.width * 0.96, size.height * 0.02)
-      ..lineTo(size.width * 0.92, size.height * 0.52)
-      ..lineTo(size.width, size.height * 0.88)
-      ..lineTo(size.width * 0.60, size.height * 0.94)
-      ..lineTo(size.width * 0.31, size.height)
-      ..lineTo(size.width * 0.03, size.height * 0.86)
-      ..lineTo(size.width * 0.08, size.height * 0.54)
-      ..close();
-    canvas.drawPath(path, paint);
-
-    final darkPaint = Paint()..color = const Color(0x55221B3D);
-    for (var i = 0; i < 9; i++) {
-      final y = size.height * (0.10 + i * 0.10);
-      canvas.drawRect(
-        Rect.fromLTWH(size.width * 0.04, y, size.width * 0.92, 5),
-        darkPaint,
-      );
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
-}
-
-class _DottedGridPainter extends CustomPainter {
-  const _DottedGridPainter();
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()..color = const Color(0xFF181A21);
-    const spacing = 26.0;
-    const radius = 1.4;
-
-    for (var y = 0.0; y <= size.height; y += spacing) {
-      for (var x = 0.0; x <= size.width; x += spacing) {
-        canvas.drawCircle(Offset(x, y), radius, paint);
-      }
-    }
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
-}
-
-class _OfferItemGrid extends StatelessWidget {
-  final List<ComboOfferItem> items;
-  final String offerType;
-  final bool showPrice;
-  final bool showProductImage;
-  final double priceFontScale;
-  final TvMenuThemeData theme;
-
-  const _OfferItemGrid({
-    required this.items,
-    required this.offerType,
-    required this.showPrice,
-    required this.showProductImage,
-    required this.priceFontScale,
-    required this.theme,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    if (items.isEmpty) return const SizedBox.shrink();
     return LayoutBuilder(
       builder: (context, constraints) {
-        final count = items.length;
-        final minTileWidth = constraints.maxWidth < 900 ? 170.0 : 230.0;
-        final minTileHeight = constraints.maxHeight < 420 ? 190.0 : 245.0;
-        var columns = (constraints.maxWidth / minTileWidth).floor();
-        columns = columns.clamp(1, count);
-        var rows = (count / columns).ceil();
-        while (
-            rows * minTileHeight > constraints.maxHeight && columns < count) {
-          columns++;
-          rows = (count / columns).ceil();
-        }
-        final tileWidth = constraints.maxWidth / columns;
-        final tileHeight = constraints.maxHeight / rows;
-
-        return GridView.builder(
-          physics: const NeverScrollableScrollPhysics(),
-          padding: EdgeInsets.zero,
-          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: columns,
-            mainAxisSpacing: 18,
-            crossAxisSpacing: 22,
-            childAspectRatio: tileWidth / tileHeight,
+        final size = min(constraints.maxWidth, constraints.maxHeight);
+        return Container(
+          decoration: const BoxDecoration(
+            shape: BoxShape.circle,
           ),
-          itemCount: count,
-          itemBuilder: (context, index) {
-            return _OfferProductCard(
-              item: items[index],
-              offerType: offerType,
-              showPrice: showPrice,
-              showProductImage: showProductImage,
-              priceFontScale: priceFontScale,
-              theme: theme,
-            );
-          },
+          clipBehavior: Clip.antiAlias,
+          child: _PremiumHeroDish(
+            imageUrl: imageUrl,
+            size: size,
+            showProductImage: showProductImage,
+          ),
         );
       },
-    );
-  }
-}
-
-class _OfferProductCard extends StatelessWidget {
-  final ComboOfferItem item;
-  final String offerType;
-  final bool showPrice;
-  final bool showProductImage;
-  final double priceFontScale;
-  final TvMenuThemeData theme;
-
-  const _OfferProductCard({
-    required this.item,
-    required this.offerType,
-    required this.showPrice,
-    required this.showProductImage,
-    required this.priceFontScale,
-    required this.theme,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    final product = item.product;
-    final menuPrice = item.variantPrice ?? product.price;
-    final offerPrice = item.discountPrice ?? menuPrice;
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 4),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Expanded(
-            child: Center(
-              child: showProductImage && product.imageUrl != null
-                  ? ClipRRect(
-                      borderRadius: BorderRadius.circular(8),
-                      child: CachedNetworkImage(
-                        imageUrl: product.imageUrl!,
-                        fit: BoxFit.cover,
-                        width: double.infinity,
-                        height: double.infinity,
-                      ),
-                    )
-                  : const Icon(
-                      Icons.local_offer_rounded,
-                      color: Color(0xFFE32121),
-                      size: 72,
-                    ),
-            ),
-          ),
-          const SizedBox(height: 14),
-          Text(
-            product.name,
-            maxLines: 2,
-            overflow: TextOverflow.ellipsis,
-            textAlign: TextAlign.center,
-            style: GoogleFonts.dmSans(
-              color: Colors.white,
-              fontSize: 22,
-              fontWeight: FontWeight.w800,
-              height: 1.05,
-            ),
-          ),
-          if (item.variantLabel?.isNotEmpty == true) ...[
-            const SizedBox(height: 4),
-            Text(
-              item.variantLabel!,
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-              textAlign: TextAlign.center,
-              style: GoogleFonts.dmSans(
-                color: const Color(0xFFB9BBC6),
-                fontSize: 14,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
-          ],
-          if (showPrice) ...[
-            const SizedBox(height: 8),
-            offerType == 'free'
-                ? Text(
-                    _freeOfferDetail(
-                      item,
-                      item.buyQuantity ?? item.quantity,
-                      item.freeQuantity ?? 1,
-                    ),
-                    maxLines: 2,
-                    overflow: TextOverflow.ellipsis,
-                    textAlign: TextAlign.center,
-                    style: GoogleFonts.dmSans(
-                      color: const Color(0xFF6BFFB1),
-                      fontSize: 18 * priceFontScale,
-                      fontWeight: FontWeight.w900,
-                    ),
-                  )
-                : Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      if (offerPrice < menuPrice) ...[
-                        Text(
-                          'Rs. ${menuPrice.toStringAsFixed(0)}',
-                          style: GoogleFonts.dmSans(
-                            color: const Color(0xFF8B8E99),
-                            fontSize: 17 * priceFontScale,
-                            decoration: TextDecoration.lineThrough,
-                            decorationColor: const Color(0xFF8B8E99),
-                            decorationThickness: 2,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                      ],
-                      Text(
-                        'Rs. ${offerPrice.toStringAsFixed(0)}',
-                        style: GoogleFonts.dmSans(
-                          color: const Color(0xFFFFD13F),
-                          fontSize: 28 * priceFontScale,
-                          fontWeight: FontWeight.w900,
-                          height: 0.96,
-                        ),
-                      ),
-                    ],
-                  ),
-          ],
-        ],
-      ),
-    );
-  }
-}
-
-class _BusinessLogo extends StatelessWidget {
-  final String? logoUrl;
-  final String? businessName;
-  final double size;
-
-  const _BusinessLogo({
-    required this.logoUrl,
-    required this.businessName,
-    required this.size,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    if (logoUrl?.isNotEmpty == true) {
-      return ClipOval(
-        child: CachedNetworkImage(
-          imageUrl: logoUrl!,
-          width: size,
-          height: size,
-          fit: BoxFit.cover,
-        ),
-      );
-    }
-    final initial = (businessName?.trim().isNotEmpty == true)
-        ? businessName!.trim().substring(0, 1).toUpperCase()
-        : 'T';
-    return CircleAvatar(
-      radius: size / 2,
-      backgroundColor: const Color(0xFFE32121),
-      child: Text(
-        initial,
-        style: GoogleFonts.dmSans(
-          color: Colors.white,
-          fontSize: size * 0.38,
-          fontWeight: FontWeight.w900,
-        ),
-      ),
     );
   }
 }
@@ -949,21 +1482,21 @@ String _productLabel(ComboOfferItem item) {
   return '${item.product.name} $variant';
 }
 
-String _freeOfferDetail(ComboOfferItem item, int buyQty, int freeQty) {
-  return 'Buy $buyQty ${_productLabel(item)}, get $freeQty ${_freeProductLabel(item)} free';
-}
-
 bool _isMalayalam(String language) => language.toLowerCase() == 'malayalam';
 
-String _offerLocalized(String language, String key) {
+String _comboLocalized(String language, String key) {
   if (_isMalayalam(language)) {
     return switch (key) {
-      'discountOffer' => 'ഡിസ്കൗണ്ട് ഓഫർ',
+      'eyebrow' => 'കോംബോ സ്പെഷ്യൽ',
+      'todaysBestDeal' => 'ഇന്നത്തെ ബെസ്റ്റ് ഡീൽ',
+      'serveGreatness' => 'രുചിയുടെ സന്തോഷം',
       _ => key,
     };
   }
   return switch (key) {
-    'discountOffer' => 'Discount Offer',
+    'eyebrow' => 'COMBO SPECIAL',
+    'todaysBestDeal' => "Today's Best Deal",
+    'serveGreatness' => 'WE SERVE YOU GREATNESS',
     _ => key,
   };
 }
@@ -978,4 +1511,43 @@ String _freeOfferPosterDetail(
     return '$buyQty ${_productLabel(item)} വാങ്ങൂ\n$freeQty ${_freeProductLabel(item)} സൗജന്യം';
   }
   return 'Buy $buyQty ${_productLabel(item)}\nGet $freeQty ${_freeProductLabel(item)} free';
+}
+
+double _comboItemUnitPrice(ComboOfferItem item) {
+  if (item.discountPrice != null && item.discountPrice! > 0) {
+    return item.discountPrice!;
+  }
+  return _comboItemOriginalUnitPrice(item);
+}
+
+double _comboItemOriginalUnitPrice(ComboOfferItem item) {
+  if (item.variantPrice != null && item.variantPrice! > 0) {
+    return item.variantPrice!;
+  }
+  final selectedLabel = item.variantLabel?.trim().toLowerCase();
+  if (selectedLabel != null && selectedLabel.isNotEmpty) {
+    for (final variant in item.product.priceVariants) {
+      if (variant.label.trim().toLowerCase() == selectedLabel) {
+        return variant.price;
+      }
+    }
+  }
+  if (item.product.price > 0) return item.product.price;
+  if (item.product.priceVariants.isNotEmpty) {
+    final fullVariant = item.product.priceVariants
+        .where((variant) => variant.label.trim().toLowerCase() == 'full')
+        .cast<PriceVariant?>()
+        .firstWhere((_) => true, orElse: () => null);
+    if (fullVariant != null) return fullVariant.price;
+    return item.product.priceVariants.last.price;
+  }
+  return item.product.price;
+}
+
+String? _absoluteImageUrl(String? url) {
+  final value = url?.trim();
+  if (value == null || value.isEmpty) return null;
+  if (value.startsWith('http')) return value;
+  final path = value.startsWith('/') ? value.substring(1) : value;
+  return '${AppEnvironment.contentBaseUrl}/$path';
 }
