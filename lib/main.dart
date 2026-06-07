@@ -5,10 +5,12 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'screens/splash_screen.dart';
 import 'theme/app_theme.dart';
+import 'core/app_environment.dart';
 import 'services/error_reporter.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await AppEnvironment.load();
   FlutterError.onError = (details) {
     FlutterError.presentError(details);
     unawaited(ErrorReporter.report(

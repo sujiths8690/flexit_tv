@@ -3,10 +3,12 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 
+import '../core/app_environment.dart';
+
 class ErrorReporter {
   ErrorReporter._();
 
-  static const _baseUrl = 'http://192.168.29.184:4000';
+  static String get _baseUrl => AppEnvironment.apiBaseUrl;
 
   static Future<void> report(
     Object error,

@@ -1,5 +1,6 @@
 // lib/models/models.dart
 
+import '../core/app_environment.dart';
 import '../theme/app_theme.dart';
 
 enum DisplayMode { qrPairing, media, menuBoard }
@@ -437,7 +438,7 @@ String? _parseImageUrl(String? url) {
   if (value == null || value.isEmpty) return null;
   if (value.startsWith('http')) return value;
   final path = value.startsWith('/') ? value.substring(1) : value;
-  return 'http://192.168.29.184:4002/$path';
+  return '${AppEnvironment.contentBaseUrl}/$path';
 }
 
 List<ComboOfferItem> _parseComboOfferItems(List<dynamic> items) {

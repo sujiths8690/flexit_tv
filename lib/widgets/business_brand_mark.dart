@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import '../core/app_environment.dart';
 import '../theme/app_theme.dart';
 
 class BusinessBrandMark extends StatelessWidget {
@@ -71,7 +72,7 @@ class BusinessBrandMark extends StatelessWidget {
   String _absoluteUrl(String url) {
     if (url.startsWith('http')) return url;
     final path = url.startsWith('/') ? url.substring(1) : url;
-    return 'http://192.168.29.184:4002/$path';
+    return '${AppEnvironment.contentBaseUrl}/$path';
   }
 }
 

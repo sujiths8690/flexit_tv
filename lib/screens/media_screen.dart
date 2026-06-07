@@ -8,6 +8,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'dart:async';
 import 'dart:io';
 import 'package:video_player/video_player.dart';
+import '../core/app_environment.dart';
 import '../models/models.dart';
 import '../services/local_media_service.dart';
 import '../theme/app_theme.dart';
@@ -211,7 +212,7 @@ class _MediaScreenState extends State<MediaScreen> {
     if (url.startsWith('/')) return Uri.file(url).toString();
     if (url.startsWith('http')) return url;
     final path = url.startsWith('/') ? url.substring(1) : url;
-    return 'http://192.168.29.184:4002/$path';
+    return '${AppEnvironment.contentBaseUrl}/$path';
   }
 
   bool _isPlayableVideoUrl(String url) {

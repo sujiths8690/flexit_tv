@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:google_fonts/google_fonts.dart';
 
+import '../core/app_environment.dart';
 import '../models/models.dart';
 import '../theme/app_theme.dart';
 
@@ -1225,5 +1226,5 @@ String? _absoluteImageUrl(String? url) {
   if (value == null || value.isEmpty) return null;
   if (value.startsWith('http')) return value;
   final path = value.startsWith('/') ? value.substring(1) : value;
-  return 'http://192.168.29.184:4002/$path';
+  return '${AppEnvironment.contentBaseUrl}/$path';
 }

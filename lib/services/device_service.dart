@@ -13,11 +13,12 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:web_socket_channel/web_socket_channel.dart';
 
+import '../core/app_environment.dart';
 import '../models/models.dart';
 
 class DeviceService extends ChangeNotifier with WidgetsBindingObserver {
-  static const String _baseUrl = 'http://192.168.29.184:4000';
-  static const String _wsUrl = 'ws://192.168.29.184:4000/realtime-ws';
+  static String get _baseUrl => AppEnvironment.apiBaseUrl;
+  static String get _wsUrl => AppEnvironment.realtimeWsUrl;
   static const MethodChannel _deviceInfoChannel =
       MethodChannel('com.flexit.display/device_info');
   static const String _menuConfigCachePrefix = 'cached_menu_config_';
