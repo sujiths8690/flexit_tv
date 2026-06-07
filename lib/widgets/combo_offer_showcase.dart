@@ -1,4 +1,5 @@
 import 'dart:math';
+import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
@@ -7,6 +8,27 @@ import 'package:google_fonts/google_fonts.dart';
 import '../core/app_environment.dart';
 import '../models/models.dart';
 import '../theme/app_theme.dart';
+
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// DESIGN TOKENS
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+class _PremiumTokens {
+  // Core palette â€” deep charcoal base with ember gold accents
+  static const Color bgDeep = Color(0xFF0D0A08);
+  static const Color bgMid = Color(0xFF1A1410);
+  static const Color bgSurface = Color(0xFF241E18);
+  static const Color bgGlass = Color(0x22FFFFFF);
+  static const Color goldPrimary = Color(0xFFD4A855);
+  static const Color goldLight = Color(0xFFF0C878);
+  static const Color goldDim = Color(0xFF8C6E35);
+  static const Color textMuted = Color(0xFFB0A898);
+  static const Color priceText = Color(0xFF0D0A08);
+}
+
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// PUBLIC ENTRY WIDGET  (API identical to original ComboOfferShowcase)
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
 class ComboOfferShowcase extends StatelessWidget {
   final List<MenuItem> combos;
@@ -48,9 +70,7 @@ class ComboOfferShowcase extends StatelessWidget {
 
   int get offersPerPage => offersPerPageFor(screenSize);
 
-  static int offersPerPageFor(Size size) {
-    return 1;
-  }
+  static int offersPerPageFor(Size size) => 1;
 
   @override
   Widget build(BuildContext context) {
@@ -88,11 +108,10 @@ class ComboOfferShowcase extends StatelessWidget {
             return FadeTransition(opacity: animation, child: child);
         }
       },
-      child: _ComboOfferFeature(
+      child: _PremiumComboFeature(
         key: ValueKey('combo-$safePage'),
         combo: combo,
         theme: theme,
-        screenWidth: screenSize.width,
         screenSize: screenSize,
         headingFontScale: headingFontScale,
         nameFontScale: nameFontScale,
@@ -108,10 +127,13 @@ class ComboOfferShowcase extends StatelessWidget {
   }
 }
 
-class _ComboOfferFeature extends StatelessWidget {
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// MAIN FEATURE WIDGET
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+class _PremiumComboFeature extends StatelessWidget {
   final MenuItem combo;
   final TvMenuThemeData theme;
-  final double screenWidth;
   final Size screenSize;
   final double headingFontScale;
   final double nameFontScale;
@@ -123,11 +145,10 @@ class _ComboOfferFeature extends StatelessWidget {
   final String? businessName;
   final String? businessLogoUrl;
 
-  const _ComboOfferFeature({
+  const _PremiumComboFeature({
     super.key,
     required this.combo,
     required this.theme,
-    required this.screenWidth,
     required this.screenSize,
     required this.headingFontScale,
     required this.nameFontScale,
@@ -140,30 +161,39 @@ class _ComboOfferFeature extends StatelessWidget {
     required this.businessLogoUrl,
   });
 
+  double get screenWidth => screenSize.width;
+  double get screenHeight => screenSize.height;
+
   @override
   Widget build(BuildContext context) {
     final heroImage = _absoluteImageUrl(combo.imageUrl) ??
         (combo.comboItems.isNotEmpty
             ? _absoluteImageUrl(combo.comboItems.first.product.imageUrl)
             : null);
-    final logoSize = (screenWidth * 0.056).clamp(54.0, 96.0);
-    final sideInset = (screenWidth * 0.055).clamp(30.0, 80.0);
-    final topInset = (screenSize.height * 0.032).clamp(20.0, 42.0);
-    final bottomInset = (screenSize.height * 0.040).clamp(22.0, 46.0);
+
+    final logoSize = (screenWidth * 0.056).clamp(48.0, 88.0);
+    final sideInset = (screenWidth * 0.055).clamp(28.0, 72.0);
+    final topInset = (screenHeight * 0.032).clamp(18.0, 40.0);
+    final bottomInset = (screenHeight * 0.036).clamp(20.0, 44.0);
 
     return Stack(
       fit: StackFit.expand,
       children: [
-        const Positioned.fill(child: _ComboPosterBackground()),
+        // â”€â”€ Background â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        const Positioned.fill(child: _PremiumBackground()),
+
+        // â”€â”€ Business logo â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         Positioned(
           top: topInset,
           right: sideInset,
-          child: _ComboBusinessLogo(
+          child: _PremiumBusinessLogo(
             logoUrl: businessLogoUrl,
             businessName: businessName,
             size: logoSize,
           ),
         ),
+
+        // â”€â”€ Main content â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
         SafeArea(
           child: Padding(
             padding: EdgeInsets.fromLTRB(
@@ -172,196 +202,29 @@ class _ComboOfferFeature extends StatelessWidget {
               sideInset,
               bottomInset,
             ),
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                final contentHeight = constraints.maxHeight;
-                final contentWidth = constraints.maxWidth;
-                final isCompact = contentHeight < 620;
-                final isPortraitPoster = contentHeight > contentWidth * 1.18;
-                final headlineSize = ((contentWidth * 0.060) * headingFontScale)
-                    .clamp(30.0, isCompact ? 62.0 : 86.0);
-                final titleSize = ((contentWidth * 0.082) * nameFontScale)
-                    .clamp(34.0, isCompact ? 74.0 : 118.0);
-                final dealSize = isPortraitPoster
-                    ? ((contentWidth * 0.052) * headingFontScale)
-                        .clamp(32.0, 70.0)
-                    : ((contentWidth * 0.034) * headingFontScale)
-                        .clamp(18.0, isCompact ? 34.0 : 52.0);
-                final bottomPanelHeight = (contentHeight * 0.245)
-                    .clamp(isCompact ? 132.0 : 150.0, 230.0);
-                final footerGap =
-                    (contentHeight * 0.012).clamp(4.0, isCompact ? 10.0 : 16.0);
-                final footerFontSize =
-                    ((contentWidth * 0.020) * headingFontScale)
-                        .clamp(12.0, isCompact ? 22.0 : 32.0);
-                final itemStripHeight =
-                    (bottomPanelHeight - footerGap - footerFontSize * 1.15)
-                        .clamp(76.0, 190.0);
-
-                const headlineTop = 0.0;
-                final headlineHeight = headlineSize * 1.58;
-                final titleTop =
-                    headlineTop + headlineHeight + (isCompact ? 6.0 : 12.0);
-                final titleHeight = titleSize * 1.08;
-                final defaultDealTop =
-                    titleTop + titleHeight + (isCompact ? 5.0 : 12.0);
-                final dealTop = isPortraitPoster
-                    ? max(defaultDealTop, contentHeight * 0.245)
-                    : defaultDealTop;
-                final dealHeight = dealSize * (isPortraitPoster ? 1.18 : 1.1);
-                final bottomPanelTop = contentHeight - bottomPanelHeight;
-                final defaultHeroTop =
-                    dealTop + dealHeight + (isCompact ? 8.0 : 16.0);
-                final heroTop = isPortraitPoster
-                    ? max(defaultHeroTop, contentHeight * 0.37)
-                    : defaultHeroTop;
-                final heroRoom =
-                    (bottomPanelTop - heroTop - (isCompact ? 4.0 : 12.0))
-                        .clamp(96.0, contentHeight);
-                final heroSize = isPortraitPoster
-                    ? min(contentWidth * 0.58, heroRoom).clamp(360.0, 560.0)
-                    : min(
-                        min(contentWidth * (isCompact ? 0.33 : 0.40), heroRoom),
-                        (screenSize.height * 0.34).clamp(220.0, 360.0),
-                      ).clamp(118.0, 360.0);
-                final heroLeft = (contentWidth - heroSize) / 2;
-                final priceBadgeSize = min(
-                  (contentWidth * 0.105).clamp(76.0, 148.0),
-                  heroSize * 0.48,
-                );
-
-                return Stack(
-                  clipBehavior: Clip.none,
-                  children: [
-                    Positioned(
-                      top: headlineTop,
-                      left: 0,
-                      right: 0,
-                      height: headlineHeight,
-                      child: _ComboPosterHeadline(
-                        fontSize: headlineSize,
-                        language: displayLanguage,
-                      ),
-                    ),
-                    Positioned(
-                      top: titleTop,
-                      left: contentWidth * 0.08,
-                      right: contentWidth * 0.08,
-                      height: titleHeight,
-                      child: _ComboTitleText(
-                        text: combo.name,
-                        fontSize: titleSize,
-                      ),
-                    ),
-                    Positioned(
-                      top: dealTop,
-                      left: 0,
-                      right: 0,
-                      height: dealHeight,
-                      child: Text(
-                        _comboLocalized(displayLanguage, 'todaysBestDeal'),
-                        textAlign: TextAlign.center,
-                        style: GoogleFonts.playfairDisplay(
-                          color: Colors.white,
-                          fontSize: dealSize,
-                          height: 1,
-                          letterSpacing: 0,
-                          fontStyle: FontStyle.italic,
-                          fontWeight: FontWeight.w800,
-                          shadows: const [
-                            Shadow(
-                              color: Color(0x99000000),
-                              offset: Offset(0, 4),
-                              blurRadius: 8,
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    Positioned(
-                      left: heroLeft,
-                      top: heroTop,
-                      width: heroSize,
-                      height: heroSize,
-                      child: Stack(
-                        clipBehavior: Clip.none,
-                        children: [
-                          Positioned.fill(
-                            child: _ComboHeroDish(
-                              imageUrl: heroImage,
-                              size: heroSize,
-                              showProductImage: showProductImage,
-                            ),
-                          ),
-                          if (showPrice)
-                            Positioned(
-                              right: heroSize * 0.02,
-                              bottom: heroSize * 0.10,
-                              child: _MainPriceBurst(
-                                price: combo.price,
-                                originalPrice:
-                                    _comboDisplayOriginalPrice(combo),
-                                size: priceBadgeSize,
-                                fontSize:
-                                    ((screenWidth * 0.027) * priceFontScale)
-                                        .clamp(22.0, 46.0),
-                              ),
-                            ),
-                        ],
-                      ),
-                    ),
-                    Positioned(
-                      left: 0,
-                      right: 0,
-                      bottom: 0,
-                      height: bottomPanelHeight,
-                      child: Column(
-                        mainAxisAlignment: MainAxisAlignment.end,
-                        children: [
-                          _ComboItemStrip(
-                            items: combo.comboItems,
-                            combo: combo,
-                            maxWidth: contentWidth * 0.88,
-                            showProductImage: showProductImage,
-                            showPrice: showPrice,
-                            showComboItemQuantity: showComboItemQuantity,
-                            theme: theme,
-                            maxHeight: itemStripHeight,
-                          ),
-                          SizedBox(height: footerGap),
-                          Text(
-                            _comboLocalized(displayLanguage, 'serveGreatness'),
-                            textAlign: TextAlign.center,
-                            style: GoogleFonts.bowlbyOneSc(
-                              color: const Color(0xFFE32121),
-                              fontSize: footerFontSize,
-                              height: 1,
-                              letterSpacing: 0,
-                              shadows: const [
-                                Shadow(
-                                  color: Color(0x22000000),
-                                  offset: Offset(0, 2),
-                                  blurRadius: 4,
-                                ),
-                              ],
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                );
-              },
-            ),
+            child: LayoutBuilder(builder: (context, constraints) {
+              return _PremiumLayout(
+                constraints: constraints,
+                combo: combo,
+                heroImage: heroImage,
+                theme: theme,
+                screenSize: screenSize,
+                headingFontScale: headingFontScale,
+                nameFontScale: nameFontScale,
+                priceFontScale: priceFontScale,
+                showPrice: showPrice,
+                showProductImage: showProductImage,
+                showComboItemQuantity: showComboItemQuantity,
+                displayLanguage: displayLanguage,
+              );
+            }),
           ),
         ),
-        Positioned.fill(
+
+        // â”€â”€ Decorative overlay â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        const Positioned.fill(
           child: IgnorePointer(
-            child: CustomPaint(
-              painter: _ComboPosterDoodlePainter(
-                compact: screenSize.height < 620,
-              ),
-            ),
+            child: CustomPaint(painter: _PremiumOverlayPainter()),
           ),
         ),
       ],
@@ -369,12 +232,393 @@ class _ComboOfferFeature extends StatelessWidget {
   }
 }
 
-class _ComboBusinessLogo extends StatelessWidget {
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// LAYOUT ORCHESTRATOR
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+class _PremiumLayout extends StatelessWidget {
+  final BoxConstraints constraints;
+  final MenuItem combo;
+  final String? heroImage;
+  final TvMenuThemeData theme;
+  final Size screenSize;
+  final double headingFontScale;
+  final double nameFontScale;
+  final double priceFontScale;
+  final bool showPrice;
+  final bool showProductImage;
+  final bool showComboItemQuantity;
+  final String displayLanguage;
+
+  const _PremiumLayout({
+    required this.constraints,
+    required this.combo,
+    required this.heroImage,
+    required this.theme,
+    required this.screenSize,
+    required this.headingFontScale,
+    required this.nameFontScale,
+    required this.priceFontScale,
+    required this.showPrice,
+    required this.showProductImage,
+    required this.showComboItemQuantity,
+    required this.displayLanguage,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final cw = constraints.maxWidth;
+    final ch = constraints.maxHeight;
+    final isCompact = ch < 620;
+    final isPortraitPoster = ch > cw * 1.18;
+
+    // â”€â”€ Font sizes â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    final eyebrowSize = ((cw * 0.022) * headingFontScale).clamp(11.0, 20.0);
+    final titleSize =
+        ((cw * 0.082) * nameFontScale).clamp(32.0, isCompact ? 70.0 : 112.0);
+    final taglineSize = isPortraitPoster
+        ? ((cw * 0.052) * headingFontScale).clamp(30.0, 66.0)
+        : ((cw * 0.034) * headingFontScale)
+            .clamp(16.0, isCompact ? 32.0 : 50.0);
+    final footerSize =
+        ((cw * 0.018) * headingFontScale).clamp(11.0, isCompact ? 20.0 : 28.0);
+
+    // â”€â”€ Panel heights â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    final bottomPanelH = (ch * 0.245).clamp(isCompact ? 130.0 : 148.0, 225.0);
+    final footerGap = (ch * 0.010).clamp(4.0, 14.0);
+    final itemStripH =
+        (bottomPanelH - footerGap - footerSize * 1.15).clamp(72.0, 185.0);
+
+    // â”€â”€ Vertical positions â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+    const eyebrowTop = 0.0;
+    final eyebrowH = eyebrowSize * 2.2;
+    final dividerTop = eyebrowTop + eyebrowH + (isCompact ? 4.0 : 8.0);
+    const dividerH = 1.0;
+    final titleTop = dividerTop + dividerH + (isCompact ? 8.0 : 14.0);
+    final titleH = titleSize * 1.06;
+    final defaultTagTop = titleTop + titleH + (isCompact ? 6.0 : 12.0);
+    final tagTop =
+        isPortraitPoster ? max(defaultTagTop, ch * 0.245) : defaultTagTop;
+    final tagH = taglineSize * 1.12;
+    final bottomPanelTop = ch - bottomPanelH;
+    final defaultHeroTop = tagTop + tagH + (isCompact ? 8.0 : 18.0);
+    final heroTop =
+        isPortraitPoster ? max(defaultHeroTop, ch * 0.37) : defaultHeroTop;
+    final heroRoom =
+        (bottomPanelTop - heroTop - (isCompact ? 4.0 : 12.0)).clamp(90.0, ch);
+    final heroSize = isPortraitPoster
+        ? min(cw * 0.58, heroRoom).clamp(340.0, 540.0)
+        : min(
+            min(cw * (isCompact ? 0.33 : 0.40), heroRoom),
+            (screenSize.height * 0.34).clamp(210.0, 350.0),
+          ).clamp(112.0, 350.0);
+    final heroLeft = (cw - heroSize) / 2;
+    final priceBadgeSize =
+        min((cw * 0.105).clamp(72.0, 140.0), heroSize * 0.48);
+
+    return Stack(
+      clipBehavior: Clip.none,
+      children: [
+        // â”€â”€ Eyebrow label â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        Positioned(
+          top: eyebrowTop,
+          left: 0,
+          right: 0,
+          height: eyebrowH,
+          child:
+              _EyebrowLabel(fontSize: eyebrowSize, language: displayLanguage),
+        ),
+
+        // â”€â”€ Gold divider line â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        Positioned(
+          top: dividerTop,
+          left: cw * 0.14,
+          right: cw * 0.14,
+          height: dividerH,
+          child: CustomPaint(painter: _GoldDividerPainter()),
+        ),
+
+        // â”€â”€ Combo name â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        Positioned(
+          top: titleTop,
+          left: cw * 0.06,
+          right: cw * 0.06,
+          height: titleH,
+          child: _GoldTitleText(text: combo.name, fontSize: titleSize),
+        ),
+
+        // â”€â”€ Today's tagline â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        Positioned(
+          top: tagTop,
+          left: 0,
+          right: 0,
+          height: tagH,
+          child: _TaglineText(fontSize: taglineSize, language: displayLanguage),
+        ),
+
+        // â”€â”€ Hero dish + price burst â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        Positioned(
+          left: heroLeft,
+          top: heroTop,
+          width: heroSize,
+          height: heroSize,
+          child: Stack(
+            clipBehavior: Clip.none,
+            children: [
+              Positioned.fill(
+                child: _PremiumHeroDish(
+                  imageUrl: heroImage,
+                  size: heroSize,
+                  showProductImage: showProductImage,
+                ),
+              ),
+              if (showPrice)
+                Positioned(
+                  right: heroSize * 0.02,
+                  bottom: heroSize * 0.10,
+                  child: _PremiumPriceBadge(
+                    price: combo.price,
+                    originalPrice: _comboDisplayOriginalPrice(combo),
+                    size: priceBadgeSize,
+                    fontSize: ((screenSize.width * 0.027) * priceFontScale)
+                        .clamp(20.0, 44.0),
+                  ),
+                ),
+            ],
+          ),
+        ),
+
+        // â”€â”€ Bottom panel: item strip + tagline â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+        Positioned(
+          left: 0,
+          right: 0,
+          bottom: 0,
+          height: bottomPanelH,
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              _PremiumItemStrip(
+                items: combo.comboItems,
+                combo: combo,
+                maxWidth: cw * 0.90,
+                showProductImage: showProductImage,
+                showPrice: showPrice,
+                showComboItemQuantity: showComboItemQuantity,
+                theme: theme,
+                maxHeight: itemStripH,
+              ),
+              SizedBox(height: footerGap),
+              _FooterTagline(fontSize: footerSize, language: displayLanguage),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// BACKGROUND
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+class _PremiumBackground extends StatelessWidget {
+  const _PremiumBackground();
+
+  @override
+  Widget build(BuildContext context) {
+    return const ColoredBox(
+      color: _PremiumTokens.bgDeep,
+      child: CustomPaint(painter: _PremiumBackgroundPainter()),
+    );
+  }
+}
+
+class _PremiumBackgroundPainter extends CustomPainter {
+  const _PremiumBackgroundPainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    // Deep gradient
+    canvas.drawRect(
+      Offset.zero & size,
+      Paint()
+        ..shader = const LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Color(0xFF151009),
+            Color(0xFF0D0A07),
+            Color(0xFF100C09),
+          ],
+          stops: [0.0, 0.5, 1.0],
+        ).createShader(Offset.zero & size),
+    );
+
+    // Radial warm glow (top-centre â€” light source)
+    final glowPaint = Paint()
+      ..shader = RadialGradient(
+        center: const Alignment(0, -0.7),
+        radius: 0.7,
+        colors: [
+          const Color(0xFFD4A855).withValues(alpha: 0.11),
+          const Color(0xFFD4A855).withValues(alpha: 0.0),
+        ],
+      ).createShader(Offset.zero & size);
+    canvas.drawRect(Offset.zero & size, glowPaint);
+
+    // Subtle bottom crimson warmth
+    final bottomGlow = Paint()
+      ..shader = RadialGradient(
+        center: const Alignment(0, 1.2),
+        radius: 0.7,
+        colors: [
+          const Color(0xFFBF2B2B).withValues(alpha: 0.14),
+          const Color(0xFFBF2B2B).withValues(alpha: 0.0),
+        ],
+      ).createShader(Offset.zero & size);
+    canvas.drawRect(Offset.zero & size, bottomGlow);
+
+    // Thin horizontal scan-line texture (every ~6px)
+    final linePaint = Paint()
+      ..color = Colors.white.withValues(alpha: 0.014)
+      ..strokeWidth = 0.5;
+    for (double y = 0; y < size.height; y += 6) {
+      canvas.drawLine(Offset(0, y), Offset(size.width, y), linePaint);
+    }
+
+    // Bottom panel â€” frosted dark strip
+    final panelTop = size.height * 0.73;
+    final panelPath = Path()
+      ..moveTo(0, panelTop + size.height * 0.06)
+      ..cubicTo(
+        size.width * 0.22,
+        panelTop - size.height * 0.04,
+        size.width * 0.68,
+        panelTop + size.height * 0.03,
+        size.width,
+        panelTop,
+      )
+      ..lineTo(size.width, size.height)
+      ..lineTo(0, size.height)
+      ..close();
+
+    canvas.drawPath(
+      panelPath,
+      Paint()..color = const Color(0xFF1A1410).withValues(alpha: 0.92),
+    );
+    // Gold rim on panel edge
+    final rimPaint = Paint()
+      ..color = const Color(0xFFD4A855).withValues(alpha: 0.28)
+      ..strokeWidth = 1.2
+      ..style = PaintingStyle.stroke;
+    final rimPath = Path()
+      ..moveTo(0, panelTop + size.height * 0.06)
+      ..cubicTo(
+        size.width * 0.22,
+        panelTop - size.height * 0.04,
+        size.width * 0.68,
+        panelTop + size.height * 0.03,
+        size.width,
+        panelTop,
+      );
+    canvas.drawPath(rimPath, rimPaint);
+
+    // Fine corner ornaments
+    _drawCornerOrnament(canvas, Offset(0, 0), size, 0, false);
+    _drawCornerOrnament(canvas, Offset(size.width, 0), size, 1, false);
+  }
+
+  void _drawCornerOrnament(
+      Canvas canvas, Offset origin, Size size, int corner, bool bottom) {
+    final l = (size.width * 0.06).clamp(28.0, 56.0);
+    final paint = Paint()
+      ..color = const Color(0xFFD4A855).withValues(alpha: 0.35)
+      ..strokeWidth = 1.2
+      ..style = PaintingStyle.stroke
+      ..strokeCap = StrokeCap.square;
+
+    final dx = corner == 0 ? 1.0 : -1.0;
+    final sx = corner == 0 ? origin.dx + 18 : origin.dx - 18;
+    final sy = origin.dy + 18;
+
+    canvas.drawLine(Offset(sx, sy), Offset(sx + dx * l, sy), paint);
+    canvas.drawLine(Offset(sx, sy), Offset(sx, sy + l), paint);
+    // small inner L
+    canvas.drawLine(
+        Offset(sx + dx * 8, sy + 8), Offset(sx + dx * 22, sy + 8), paint);
+    canvas.drawLine(
+        Offset(sx + dx * 8, sy + 8), Offset(sx + dx * 8, sy + 22), paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter _) => false;
+}
+
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// OVERLAY PAINTER (subtle grain + vignette)
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+class _PremiumOverlayPainter extends CustomPainter {
+  const _PremiumOverlayPainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    // Vignette
+    canvas.drawRect(
+      Offset.zero & size,
+      Paint()
+        ..shader = RadialGradient(
+          center: Alignment.center,
+          radius: 1.0,
+          colors: [
+            Colors.transparent,
+            Colors.black.withValues(alpha: 0.38),
+          ],
+          stops: const [0.55, 1.0],
+        ).createShader(Offset.zero & size),
+    );
+
+    // Decorative side rules (vertical gold lines)
+    final rulePaint = Paint()
+      ..shader = LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: [
+          const Color(0xFFD4A855).withValues(alpha: 0.0),
+          const Color(0xFFD4A855).withValues(alpha: 0.22),
+          const Color(0xFFD4A855).withValues(alpha: 0.0),
+        ],
+        stops: const [0.1, 0.45, 0.9],
+      ).createShader(Offset.zero & size)
+      ..strokeWidth = 0.6
+      ..style = PaintingStyle.stroke;
+
+    canvas.drawLine(
+      Offset(size.width * 0.035, 0),
+      Offset(size.width * 0.035, size.height),
+      rulePaint,
+    );
+    canvas.drawLine(
+      Offset(size.width * 0.965, 0),
+      Offset(size.width * 0.965, size.height),
+      rulePaint,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter _) => false;
+}
+
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// BUSINESS LOGO
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+class _PremiumBusinessLogo extends StatelessWidget {
   final String? logoUrl;
   final String? businessName;
   final double size;
 
-  const _ComboBusinessLogo({
+  const _PremiumBusinessLogo({
     required this.logoUrl,
     required this.businessName,
     required this.size,
@@ -386,31 +630,30 @@ class _ComboBusinessLogo extends StatelessWidget {
     final name = businessName?.trim();
 
     return SizedBox(
+      width: size,
       height: size,
-      child: Center(
-        child: logo != null
-            ? ClipRRect(
-                borderRadius: BorderRadius.circular(size * 0.16),
-                child: CachedNetworkImage(
-                  imageUrl: logo,
-                  width: size,
-                  height: size,
-                  fit: BoxFit.contain,
-                  placeholder: (_, __) => _LogoFallback(size: size),
-                  errorWidget: (_, __, ___) => _LogoFallback(size: size),
-                ),
-              )
-            : _LogoFallback(size: size, label: name),
-      ),
+      child: logo != null
+          ? ClipRRect(
+              borderRadius: BorderRadius.circular(size * 0.18),
+              child: CachedNetworkImage(
+                imageUrl: logo,
+                width: size,
+                height: size,
+                fit: BoxFit.contain,
+                placeholder: (_, __) => _GoldLogoFallback(size: size),
+                errorWidget: (_, __, ___) => _GoldLogoFallback(size: size),
+              ),
+            )
+          : _GoldLogoFallback(size: size, label: name),
     );
   }
 }
 
-class _LogoFallback extends StatelessWidget {
+class _GoldLogoFallback extends StatelessWidget {
   final double size;
   final String? label;
 
-  const _LogoFallback({required this.size, this.label});
+  const _GoldLogoFallback({required this.size, this.label});
 
   @override
   Widget build(BuildContext context) {
@@ -421,16 +664,17 @@ class _LogoFallback extends StatelessWidget {
       width: size,
       height: size,
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.10),
-        border: Border.all(color: Colors.white, width: 2),
+        color: _PremiumTokens.bgSurface,
+        border: Border.all(color: _PremiumTokens.goldDim, width: 1.2),
         shape: BoxShape.circle,
       ),
       child: Center(
         child: Text(
           text,
-          style: GoogleFonts.bowlbyOneSc(
-            color: Colors.white,
-            fontSize: size * 0.44,
+          style: GoogleFonts.cormorantGaramond(
+            color: _PremiumTokens.goldLight,
+            fontSize: size * 0.42,
+            fontWeight: FontWeight.w600,
             height: 1,
           ),
         ),
@@ -439,12 +683,205 @@ class _LogoFallback extends StatelessWidget {
   }
 }
 
-class _ComboHeroDish extends StatelessWidget {
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// EYEBROW LABEL  ("COMBO SPECIAL" / localized)
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+class _EyebrowLabel extends StatelessWidget {
+  final double fontSize;
+  final String language;
+
+  const _EyebrowLabel({required this.fontSize, required this.language});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      crossAxisAlignment: CrossAxisAlignment.center,
+      children: [
+        _TinyDiamond(size: fontSize * 0.55),
+        SizedBox(width: fontSize * 0.55),
+        Text(
+          _comboLocalized(language, 'eyebrow'),
+          style: GoogleFonts.cormorantGaramond(
+            color: _PremiumTokens.goldPrimary,
+            fontSize: fontSize,
+            fontWeight: FontWeight.w600,
+            letterSpacing: fontSize * 0.30,
+            height: 1,
+          ),
+        ),
+        SizedBox(width: fontSize * 0.55),
+        _TinyDiamond(size: fontSize * 0.55),
+      ],
+    );
+  }
+}
+
+class _TinyDiamond extends StatelessWidget {
+  final double size;
+
+  const _TinyDiamond({required this.size});
+
+  @override
+  Widget build(BuildContext context) {
+    return Transform.rotate(
+      angle: pi / 4,
+      child: SizedBox(
+        width: size,
+        height: size,
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            border: Border.all(color: _PremiumTokens.goldPrimary, width: 1.0),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// GOLD DIVIDER
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+class _GoldDividerPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..shader = LinearGradient(
+        colors: [
+          _PremiumTokens.goldPrimary.withValues(alpha: 0.0),
+          _PremiumTokens.goldPrimary.withValues(alpha: 0.65),
+          _PremiumTokens.goldPrimary,
+          _PremiumTokens.goldPrimary.withValues(alpha: 0.65),
+          _PremiumTokens.goldPrimary.withValues(alpha: 0.0),
+        ],
+        stops: const [0.0, 0.2, 0.5, 0.8, 1.0],
+      ).createShader(Offset.zero & size)
+      ..strokeWidth = 0.8
+      ..style = PaintingStyle.stroke;
+    canvas.drawLine(
+        Offset(0, size.height / 2), Offset(size.width, size.height / 2), paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter _) => false;
+}
+
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// COMBO TITLE  (gold embossed)
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+class _GoldTitleText extends StatelessWidget {
+  final String text;
+  final double fontSize;
+
+  const _GoldTitleText({required this.text, required this.fontSize});
+
+  @override
+  Widget build(BuildContext context) {
+    return FittedBox(
+      fit: BoxFit.scaleDown,
+      child: SizedBox(
+        width: 980,
+        child: Stack(
+          clipBehavior: Clip.none,
+          children: [
+            // Shadow layer
+            Text(
+              text.toUpperCase(),
+              maxLines: 2,
+              textAlign: TextAlign.center,
+              overflow: TextOverflow.ellipsis,
+              style: GoogleFonts.cormorantGaramond(
+                color: Colors.black.withValues(alpha: 0.60),
+                fontSize: fontSize,
+                fontWeight: FontWeight.w700,
+                height: 0.88,
+                letterSpacing: fontSize * 0.025,
+              ),
+            ),
+            // Gold foreground
+            Transform.translate(
+              offset: Offset(-fontSize * 0.025, -fontSize * 0.032),
+              child: ShaderMask(
+                shaderCallback: (bounds) => const LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Color(0xFFF5D98A),
+                    Color(0xFFD4A855),
+                    Color(0xFFB8882E),
+                    Color(0xFFD4A855),
+                  ],
+                  stops: [0.0, 0.35, 0.65, 1.0],
+                ).createShader(bounds),
+                child: Text(
+                  text.toUpperCase(),
+                  maxLines: 2,
+                  textAlign: TextAlign.center,
+                  overflow: TextOverflow.ellipsis,
+                  style: GoogleFonts.cormorantGaramond(
+                    color: Colors.white,
+                    fontSize: fontSize,
+                    fontWeight: FontWeight.w700,
+                    height: 0.88,
+                    letterSpacing: fontSize * 0.025,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// TAGLINE  ("Today's Best Deal" / localized)
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+class _TaglineText extends StatelessWidget {
+  final double fontSize;
+  final String language;
+
+  const _TaglineText({required this.fontSize, required this.language});
+
+  @override
+  Widget build(BuildContext context) {
+    return Text(
+      _comboLocalized(language, 'todaysBestDeal'),
+      textAlign: TextAlign.center,
+      style: GoogleFonts.playfairDisplay(
+        color: _PremiumTokens.textMuted,
+        fontSize: fontSize,
+        fontStyle: FontStyle.italic,
+        fontWeight: FontWeight.w500,
+        height: 1,
+        letterSpacing: 0.5,
+        shadows: const [
+          Shadow(
+            color: Color(0x66000000),
+            offset: Offset(0, 3),
+            blurRadius: 6,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// HERO DISH
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+class _PremiumHeroDish extends StatelessWidget {
   final String? imageUrl;
   final double size;
   final bool showProductImage;
 
-  const _ComboHeroDish({
+  const _PremiumHeroDish({
     required this.imageUrl,
     required this.size,
     required this.showProductImage,
@@ -458,38 +895,48 @@ class _ComboHeroDish extends StatelessWidget {
       child: Stack(
         alignment: Alignment.center,
         children: [
+          // Plate glow
           Positioned(
-            bottom: size * 0.06,
+            bottom: size * 0.05,
             child: Container(
-              width: size * 0.56,
-              height: size * 0.10,
+              width: size * 0.62,
+              height: size * 0.12,
               decoration: BoxDecoration(
-                color: Colors.black.withValues(alpha: 0.24),
+                color: Colors.transparent,
                 borderRadius: BorderRadius.circular(size),
-                boxShadow: const [
+                boxShadow: [
                   BoxShadow(
-                    color: Color(0x33000000),
-                    blurRadius: 24,
-                    offset: Offset(0, 4),
+                    color: _PremiumTokens.goldPrimary.withValues(alpha: 0.20),
+                    blurRadius: 38,
+                    spreadRadius: 10,
                   ),
                 ],
               ),
             ),
           ),
-          Container(
-            width: size * 0.92,
-            height: size * 0.92,
-            clipBehavior: Clip.none,
-            decoration: const BoxDecoration(),
+          // Ring ornament behind dish
+          Positioned(
+            top: size * 0.04,
+            child: CustomPaint(
+              size: Size(size * 0.86, size * 0.86),
+              painter: _RingOrnamentPainter(),
+            ),
+          ),
+          // Dish image
+          Positioned(
+            top: size * 0.04,
+            left: size * 0.04,
+            right: size * 0.04,
+            bottom: size * 0.04,
             child: !showProductImage || imageUrl == null
-                ? const _PosterImageFallback(label: 'COMBO')
+                ? const _PremiumImageFallback(label: 'COMBO')
                 : CachedNetworkImage(
                     imageUrl: imageUrl!,
                     fit: BoxFit.contain,
                     placeholder: (_, __) =>
-                        const _PosterImageFallback(label: 'COMBO'),
+                        const _PremiumImageFallback(label: 'COMBO'),
                     errorWidget: (_, __, ___) =>
-                        const _PosterImageFallback(label: 'COMBO'),
+                        const _PremiumImageFallback(label: 'COMBO'),
                   ),
           ),
         ],
@@ -498,168 +945,40 @@ class _ComboHeroDish extends StatelessWidget {
   }
 }
 
-class _ComboPosterHeadline extends StatelessWidget {
-  final double fontSize;
-  final String language;
+class _RingOrnamentPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final radius = size.shortestSide * 0.49;
+    final paint = Paint()
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 1.0;
 
-  const _ComboPosterHeadline({
-    required this.fontSize,
-    required this.language,
-  });
+    // Outer ring
+    paint.color = _PremiumTokens.goldPrimary.withValues(alpha: 0.18);
+    canvas.drawCircle(center, radius, paint);
+
+    // Dashed inner ring
+    paint.color = _PremiumTokens.goldPrimary.withValues(alpha: 0.10);
+    paint.strokeWidth = 0.6;
+    canvas.drawCircle(center, radius * 0.84, paint);
+  }
 
   @override
-  Widget build(BuildContext context) {
-    if (_isMalayalam(language)) {
-      return FittedBox(
-        fit: BoxFit.scaleDown,
-        child: Text(
-          _comboLocalized(language, 'headline'),
-          textAlign: TextAlign.center,
-          maxLines: 2,
-          style: GoogleFonts.notoSansMalayalam(
-            color: Colors.white,
-            fontSize: fontSize,
-            height: 1.02,
-            fontWeight: FontWeight.w900,
-            shadows: const [
-              Shadow(
-                color: Color(0x77000000),
-                offset: Offset(0, 5),
-                blurRadius: 8,
-              ),
-            ],
-          ),
-        ),
-      );
-    }
-
-    return Column(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        Text(
-          'SUPER',
-          textAlign: TextAlign.center,
-          style: GoogleFonts.bowlbyOneSc(
-            color: Colors.white,
-            fontSize: fontSize * 0.74,
-            height: 0.92,
-            letterSpacing: 0,
-            shadows: const [
-              Shadow(
-                color: Color(0x77000000),
-                offset: Offset(0, 5),
-                blurRadius: 8,
-              ),
-            ],
-          ),
-        ),
-        Text(
-          'DELICIOUS FOOD',
-          textAlign: TextAlign.center,
-          style: GoogleFonts.bowlbyOneSc(
-            color: Colors.white,
-            fontSize: fontSize,
-            height: 0.88,
-            letterSpacing: 0,
-            shadows: const [
-              Shadow(
-                color: Color(0x77000000),
-                offset: Offset(0, 5),
-                blurRadius: 8,
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
+  bool shouldRepaint(covariant CustomPainter _) => false;
 }
 
-bool _isMalayalam(String language) => language.toLowerCase() == 'malayalam';
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// PRICE BADGE  (gold starburst, dark text)
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-String _comboLocalized(String language, String key) {
-  if (_isMalayalam(language)) {
-    return switch (key) {
-      'headline' => 'അടിപൊളി ഫുഡ് കഴിച്ചാലോ?',
-      'todaysBestDeal' => 'ഇന്നത്തെ ബെസ്റ്റ് ഡീൽ',
-      'serveGreatness' => 'രുചിയുടെ സന്തോഷം',
-      _ => key,
-    };
-  }
-  return switch (key) {
-    'headline' => 'SUPER DELICIOUS FOOD',
-    'todaysBestDeal' => "Today's Best Deal",
-    'serveGreatness' => 'WE SERVE YOU GREATNESS',
-    _ => key,
-  };
-}
-
-class _ComboTitleText extends StatelessWidget {
-  final String text;
-  final double fontSize;
-
-  const _ComboTitleText({
-    required this.text,
-    required this.fontSize,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return FittedBox(
-      fit: BoxFit.scaleDown,
-      child: SizedBox(
-        width: 980,
-        child: Stack(
-          clipBehavior: Clip.none,
-          children: [
-            Text(
-              text.toUpperCase(),
-              maxLines: 2,
-              textAlign: TextAlign.center,
-              overflow: TextOverflow.ellipsis,
-              style: GoogleFonts.bowlbyOneSc(
-                color: const Color(0xFF2A0505).withValues(alpha: 0.42),
-                fontSize: fontSize,
-                height: 0.86,
-                letterSpacing: 0,
-              ),
-            ),
-            Transform.translate(
-              offset: Offset(-fontSize * 0.035, -fontSize * 0.04),
-              child: Text(
-                text.toUpperCase(),
-                maxLines: 2,
-                textAlign: TextAlign.center,
-                overflow: TextOverflow.ellipsis,
-                style: GoogleFonts.bowlbyOneSc(
-                  color: Colors.white,
-                  fontSize: fontSize,
-                  height: 0.86,
-                  letterSpacing: 0,
-                  shadows: const [
-                    Shadow(
-                      color: Color(0x88000000),
-                      offset: Offset(0, 6),
-                      blurRadius: 10,
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class _MainPriceBurst extends StatelessWidget {
+class _PremiumPriceBadge extends StatelessWidget {
   final double price;
   final double? originalPrice;
   final double size;
   final double fontSize;
 
-  const _MainPriceBurst({
+  const _PremiumPriceBadge({
     required this.price,
     required this.originalPrice,
     required this.size,
@@ -669,9 +988,8 @@ class _MainPriceBurst extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final showOriginal = originalPrice != null && originalPrice! > price;
-
     return CustomPaint(
-      painter: const _BurstPainter(color: Color(0xFFFF2727)),
+      painter: const _GoldBurstPainter(),
       child: SizedBox(
         width: size,
         height: size,
@@ -684,23 +1002,22 @@ class _MainPriceBurst extends StatelessWidget {
                   'Rs ${originalPrice!.toStringAsFixed(0)}',
                   textAlign: TextAlign.center,
                   style: GoogleFonts.bebasNeue(
-                    color: Colors.white.withValues(alpha: 0.82),
-                    fontSize: fontSize * 0.48,
+                    color: _PremiumTokens.priceText.withValues(alpha: 0.58),
+                    fontSize: fontSize * 0.46,
                     height: 0.86,
-                    letterSpacing: 0,
                     decoration: TextDecoration.lineThrough,
-                    decorationColor: Colors.white,
-                    decorationThickness: 2,
+                    decorationColor:
+                        _PremiumTokens.priceText.withValues(alpha: 0.58),
+                    decorationThickness: 1.8,
                   ),
                 ),
               Text(
                 'Rs\n${price.toStringAsFixed(0)}',
                 textAlign: TextAlign.center,
                 style: GoogleFonts.bebasNeue(
-                  color: Colors.white,
-                  fontSize: showOriginal ? fontSize * 0.92 : fontSize,
+                  color: _PremiumTokens.priceText,
+                  fontSize: showOriginal ? fontSize * 0.90 : fontSize,
                   height: 0.82,
-                  letterSpacing: 0,
                 ),
               ),
             ],
@@ -711,7 +1028,64 @@ class _MainPriceBurst extends StatelessWidget {
   }
 }
 
-class _ComboItemStrip extends StatelessWidget {
+class _GoldBurstPainter extends CustomPainter {
+  const _GoldBurstPainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+    final outer = size.shortestSide / 2;
+    final inner = outer * 0.86;
+    const points = 28;
+
+    final path = Path();
+    for (var i = 0; i < points * 2; i++) {
+      final angle = -pi / 2 + i * pi / points;
+      final radius = i.isEven ? outer : inner;
+      final pt = center + Offset(cos(angle), sin(angle)) * radius;
+      if (i == 0) {
+        path.moveTo(pt.dx, pt.dy);
+      } else {
+        path.lineTo(pt.dx, pt.dy);
+      }
+    }
+    path.close();
+
+    // Gold fill with gradient
+    canvas.drawPath(
+      path,
+      Paint()
+        ..shader = RadialGradient(
+          center: const Alignment(-0.2, -0.3),
+          radius: 0.9,
+          colors: const [
+            Color(0xFFF5D98A),
+            Color(0xFFD4A855),
+            Color(0xFFB8882E),
+          ],
+          stops: const [0.0, 0.55, 1.0],
+        ).createShader(Offset.zero & size),
+    );
+
+    // Thin dark stroke
+    canvas.drawPath(
+      path,
+      Paint()
+        ..color = Colors.black.withValues(alpha: 0.28)
+        ..strokeWidth = 0.8
+        ..style = PaintingStyle.stroke,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant _GoldBurstPainter _) => false;
+}
+
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// ITEM STRIP
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+class _PremiumItemStrip extends StatelessWidget {
   final List<ComboOfferItem> items;
   final MenuItem combo;
   final double maxWidth;
@@ -721,7 +1095,7 @@ class _ComboItemStrip extends StatelessWidget {
   final TvMenuThemeData theme;
   final double maxHeight;
 
-  const _ComboItemStrip({
+  const _PremiumItemStrip({
     required this.items,
     required this.combo,
     required this.maxWidth,
@@ -736,13 +1110,7 @@ class _ComboItemStrip extends StatelessWidget {
   Widget build(BuildContext context) {
     final displayItems = items.isNotEmpty
         ? items.take(4).toList()
-        : [
-            ComboOfferItem(
-              id: 0,
-              quantity: 1,
-              product: combo,
-            )
-          ];
+        : [ComboOfferItem(id: 0, quantity: 1, product: combo)];
 
     return ConstrainedBox(
       constraints: BoxConstraints(maxWidth: maxWidth),
@@ -755,8 +1123,8 @@ class _ComboItemStrip extends StatelessWidget {
             for (final item in displayItems)
               Expanded(
                 child: Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 10),
-                  child: _ComboPosterItemTile(
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  child: _PremiumItemTile(
                     item: item,
                     showProductImage: showProductImage,
                     showPrice: showPrice,
@@ -772,14 +1140,14 @@ class _ComboItemStrip extends StatelessWidget {
   }
 }
 
-class _ComboPosterItemTile extends StatelessWidget {
+class _PremiumItemTile extends StatelessWidget {
   final ComboOfferItem item;
   final bool showProductImage;
   final bool showPrice;
   final bool showComboItemQuantity;
   final TvMenuThemeData theme;
 
-  const _ComboPosterItemTile({
+  const _PremiumItemTile({
     required this.item,
     required this.showProductImage,
     required this.showPrice,
@@ -792,129 +1160,125 @@ class _ComboPosterItemTile extends StatelessWidget {
     final imageUrl = _absoluteImageUrl(item.product.imageUrl);
     final price = _comboItemUnitPrice(item);
 
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final detail = _comboItemDetail(
-          item,
-          showQuantity: showComboItemQuantity,
-        );
-        final detailHeight = detail.isNotEmpty ? 15.0 : 0.0;
-        final nameHeight = constraints.maxHeight < 120 ? 28.0 : 34.0;
-        final gapHeight = constraints.maxHeight < 120 ? 4.0 : 6.0;
-        final availableImageHeight = max(42.0,
-            constraints.maxHeight - nameHeight - gapHeight - detailHeight);
-        final imageSize = min(
-          constraints.maxWidth.clamp(68.0, 150.0),
-          (availableImageHeight / 0.78).clamp(56.0, 150.0),
-        );
-        final nameFontSize = min(
-          constraints.maxWidth.clamp(16.0, 28.0),
-          constraints.maxHeight < 120 ? 20.0 : 28.0,
-        );
-        final detailFontSize = min(
-          constraints.maxWidth.clamp(10.0, 14.0),
-          constraints.maxHeight < 120 ? 11.0 : 14.0,
-        );
-        return Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            SizedBox(
-              height: imageSize * 0.78,
-              child: Stack(
-                clipBehavior: Clip.none,
-                alignment: Alignment.center,
-                children: [
-                  SizedBox(
-                    width: imageSize,
-                    height: imageSize * 0.78,
+    return LayoutBuilder(builder: (context, constraints) {
+      final detail =
+          _comboItemDetail(item, showQuantity: showComboItemQuantity);
+      final detailHeight = detail.isNotEmpty ? 14.0 : 0.0;
+      final nameHeight = constraints.maxHeight < 120 ? 26.0 : 32.0;
+      final gapH = constraints.maxHeight < 120 ? 4.0 : 6.0;
+      final imageH =
+          max(40.0, constraints.maxHeight - nameHeight - gapH - detailHeight);
+      final imageSize = min(constraints.maxWidth.clamp(64.0, 140.0),
+          (imageH / 0.78).clamp(52.0, 140.0));
+      final nameFontSize = min(constraints.maxWidth.clamp(14.0, 26.0),
+          constraints.maxHeight < 120 ? 18.0 : 26.0);
+      final detailFontSz = min(constraints.maxWidth.clamp(9.0, 13.0),
+          constraints.maxHeight < 120 ? 10.0 : 13.0);
+
+      return Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          SizedBox(
+            height: imageSize * 0.78,
+            child: Stack(
+              clipBehavior: Clip.none,
+              alignment: Alignment.center,
+              children: [
+                // Glass card backing
+                Container(
+                  width: imageSize,
+                  height: imageSize * 0.78,
+                  decoration: BoxDecoration(
+                    color: _PremiumTokens.bgGlass,
+                    borderRadius: BorderRadius.circular(imageSize * 0.14),
+                    border: Border.all(
+                      color: _PremiumTokens.goldPrimary.withValues(alpha: 0.14),
+                      width: 0.8,
+                    ),
+                  ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(imageSize * 0.14),
                     child: !showProductImage || imageUrl == null
-                        ? const _PosterImageFallback(label: 'ITEM')
+                        ? const _PremiumImageFallback(label: 'ITEM')
                         : CachedNetworkImage(
                             imageUrl: imageUrl,
                             fit: BoxFit.contain,
                             placeholder: (_, __) =>
-                                const _PosterImageFallback(label: 'ITEM'),
+                                const _PremiumImageFallback(label: 'ITEM'),
                             errorWidget: (_, __, ___) =>
-                                const _PosterImageFallback(label: 'ITEM'),
+                                const _PremiumImageFallback(label: 'ITEM'),
                           ),
                   ),
-                  if (showPrice)
-                    Positioned(
-                      right: 0,
-                      top: -8,
-                      child: _SmallPriceBurst(price: price),
-                    ),
-                ],
-              ),
-            ),
-            SizedBox(height: gapHeight),
-            SizedBox(
-              width: double.infinity,
-              height: nameHeight,
-              child: FittedBox(
-                fit: BoxFit.scaleDown,
-                alignment: Alignment.center,
-                child: Text(
-                  item.product.name.toUpperCase(),
-                  maxLines: 1,
-                  textAlign: TextAlign.center,
-                  style: GoogleFonts.bowlbyOneSc(
-                    color: const Color(0xFFE32121),
-                    fontSize: nameFontSize,
-                    height: 1,
-                    letterSpacing: 0,
-                    shadows: const [
-                      Shadow(
-                        color: Color(0x22000000),
-                        offset: Offset(0, 2),
-                        blurRadius: 4,
-                      ),
-                    ],
-                  ),
                 ),
-              ),
+                if (showPrice)
+                  Positioned(
+                    right: 0,
+                    top: -6,
+                    child: _SmallGoldBadge(price: price),
+                  ),
+              ],
             ),
-            if (detail.isNotEmpty)
-              Text(
-                detail,
+          ),
+          SizedBox(height: gapH),
+          SizedBox(
+            width: double.infinity,
+            height: nameHeight,
+            child: FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.center,
+              child: Text(
+                item.product.name.toUpperCase(),
                 maxLines: 1,
                 textAlign: TextAlign.center,
-                overflow: TextOverflow.ellipsis,
-                style: GoogleFonts.nunito(
-                  color: const Color(0xFF2A2A2A).withValues(alpha: 0.72),
-                  fontSize: detailFontSize,
-                  height: 1,
+                style: GoogleFonts.cormorantGaramond(
+                  color: _PremiumTokens.goldLight,
+                  fontSize: nameFontSize,
                   fontWeight: FontWeight.w700,
+                  height: 1,
+                  letterSpacing: 1.2,
                 ),
               ),
-          ],
-        );
-      },
-    );
+            ),
+          ),
+          if (detail.isNotEmpty)
+            Text(
+              detail,
+              maxLines: 1,
+              textAlign: TextAlign.center,
+              overflow: TextOverflow.ellipsis,
+              style: GoogleFonts.nunito(
+                color: _PremiumTokens.textMuted.withValues(alpha: 0.80),
+                fontSize: detailFontSz,
+                height: 1,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+        ],
+      );
+    });
   }
 }
 
-class _SmallPriceBurst extends StatelessWidget {
+class _SmallGoldBadge extends StatelessWidget {
   final double price;
 
-  const _SmallPriceBurst({required this.price});
+  const _SmallGoldBadge({required this.price});
 
   @override
   Widget build(BuildContext context) {
     return CustomPaint(
-      painter: const _BurstPainter(color: Color(0xFFFFD21A)),
+      painter: const _GoldBurstPainter(),
       child: SizedBox(
-        width: 54,
-        height: 54,
+        width: 50,
+        height: 50,
         child: Center(
           child: Text(
             'Rs\n${price.toStringAsFixed(0)}',
             textAlign: TextAlign.center,
             style: GoogleFonts.bebasNeue(
-              color: const Color(0xFFE43115),
-              fontSize: 17,
-              height: 0.82,
-              letterSpacing: 0,
+              color: _PremiumTokens.priceText,
+              fontSize: 15,
+              height: 0.84,
             ),
           ),
         ),
@@ -923,26 +1287,65 @@ class _SmallPriceBurst extends StatelessWidget {
   }
 }
 
-class _PosterImageFallback extends StatelessWidget {
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// FOOTER TAGLINE
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+class _FooterTagline extends StatelessWidget {
+  final double fontSize;
+  final String language;
+
+  const _FooterTagline({required this.fontSize, required this.language});
+
+  @override
+  Widget build(BuildContext context) {
+    return ShaderMask(
+      shaderCallback: (bounds) => const LinearGradient(
+        colors: [Color(0xFF8C6E35), Color(0xFFD4A855), Color(0xFF8C6E35)],
+        stops: [0.0, 0.5, 1.0],
+      ).createShader(bounds),
+      child: Text(
+        _comboLocalized(language, 'serveGreatness'),
+        textAlign: TextAlign.center,
+        style: GoogleFonts.cormorantGaramond(
+          color: Colors.white,
+          fontSize: fontSize,
+          fontWeight: FontWeight.w600,
+          letterSpacing: fontSize * 0.20,
+          height: 1,
+        ),
+      ),
+    );
+  }
+}
+
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// IMAGE FALLBACK
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+
+class _PremiumImageFallback extends StatelessWidget {
   final String label;
 
-  const _PosterImageFallback({required this.label});
+  const _PremiumImageFallback({required this.label});
 
   @override
   Widget build(BuildContext context) {
     return DecoratedBox(
       decoration: BoxDecoration(
-        color: const Color(0xFF26110D).withValues(alpha: 0.86),
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.18)),
+        color: _PremiumTokens.bgMid,
+        border: Border.all(
+          color: _PremiumTokens.goldDim.withValues(alpha: 0.30),
+          width: 0.8,
+        ),
       ),
       child: Center(
         child: Text(
           label,
-          style: GoogleFonts.bowlbyOneSc(
-            color: Colors.white.withValues(alpha: 0.68),
-            fontSize: 16,
-            letterSpacing: 0,
+          style: GoogleFonts.cormorantGaramond(
+            color: _PremiumTokens.goldDim.withValues(alpha: 0.60),
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            letterSpacing: 2,
           ),
         ),
       ),
@@ -950,214 +1353,45 @@ class _PosterImageFallback extends StatelessWidget {
   }
 }
 
-class _ComboPosterBackground extends StatelessWidget {
-  const _ComboPosterBackground();
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// LOCALIZATION  (unchanged logic, extended with new keys)
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-  @override
-  Widget build(BuildContext context) {
-    return const ColoredBox(
-      color: Color(0xFFB91414),
-      child: CustomPaint(painter: _ComboPosterBackgroundPainter()),
-    );
+bool _isMalayalam(String language) => language.toLowerCase() == 'malayalam';
+
+String _comboLocalized(String language, String key) {
+  if (_isMalayalam(language)) {
+    return switch (key) {
+      'eyebrow' => 'കോംബോ സ്പെഷ്യൽ',
+      'headline' => 'അടിപൊളി ഫുഡ് കഴിച്ചാലോ?',
+      'todaysBestDeal' => 'ഇന്നത്തെ ബെസ്റ്റ് ഡീൽ',
+      'serveGreatness' => 'രുചിയുടെ സന്തോഷം',
+      _ => key,
+    };
   }
+  return switch (key) {
+    'eyebrow' => 'COMBO SPECIAL',
+    'headline' => 'SUPER DELICIOUS FOOD',
+    'todaysBestDeal' => "Today's Best Deal",
+    'serveGreatness' => 'WE SERVE YOU GREATNESS',
+    _ => key,
+  };
 }
 
-class _ComboPosterBackgroundPainter extends CustomPainter {
-  const _ComboPosterBackgroundPainter();
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// PRICE HELPERS  (identical to original)
+// â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 
-  @override
-  void paint(Canvas canvas, Size size) {
-    final rect = Offset.zero & size;
-    canvas.drawRect(
-      rect,
-      Paint()
-        ..shader = const LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [
-            Color(0xFFC51818),
-            Color(0xFFA90F13),
-            Color(0xFF8D0A0E),
-          ],
-        ).createShader(rect),
-    );
-
-    final brickPaint = Paint()
-      ..color = Colors.black.withValues(alpha: 0.055)
-      ..strokeWidth = 1.4;
-    final brickHeight = (size.height * 0.055).clamp(34.0, 58.0);
-    final brickWidth = (size.width * 0.125).clamp(88.0, 150.0);
-    final redAreaHeight = size.height * 0.70;
-    for (var y = 0.0; y < redAreaHeight; y += brickHeight) {
-      canvas.drawLine(Offset(0, y), Offset(size.width, y), brickPaint);
-      final offset = ((y / brickHeight).round().isEven) ? 0.0 : brickWidth / 2;
-      for (var x = -brickWidth + offset; x < size.width; x += brickWidth) {
-        canvas.drawLine(Offset(x, y), Offset(x, y + brickHeight), brickPaint);
-      }
-    }
-
-    final whiteBase = Path()
-      ..moveTo(0, size.height * 0.63)
-      ..cubicTo(
-        size.width * 0.26,
-        size.height * 0.70,
-        size.width * 0.42,
-        size.height * 0.55,
-        size.width,
-        size.height * 0.61,
-      )
-      ..lineTo(size.width, size.height)
-      ..lineTo(0, size.height)
-      ..close();
-    canvas.drawPath(whiteBase, Paint()..color = const Color(0xFFF9F6F0));
-
-    final rim = Paint()
-      ..color = const Color(0xFFE32121)
-      ..strokeWidth = 3
-      ..style = PaintingStyle.stroke;
-    final rimPath = Path()
-      ..moveTo(size.width * 0.08, size.height * 0.80)
-      ..quadraticBezierTo(
-        size.width * 0.22,
-        size.height * 0.82,
-        size.width * 0.38,
-        size.height * 0.80,
-      )
-      ..moveTo(size.width * 0.62, size.height * 0.82)
-      ..quadraticBezierTo(
-        size.width * 0.77,
-        size.height * 0.80,
-        size.width * 0.92,
-        size.height * 0.82,
-      );
-    canvas.drawPath(rimPath, rim);
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
-}
-
-class _ComboPosterDoodlePainter extends CustomPainter {
-  final bool compact;
-
-  const _ComboPosterDoodlePainter({
-    this.compact = false,
-  });
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final paint = Paint()
-      ..color = Colors.white.withValues(alpha: 0.82)
-      ..strokeWidth = 3
-      ..style = PaintingStyle.stroke
-      ..strokeCap = StrokeCap.round;
-
-    final leftArrowTipX = compact ? 0.33 : 0.23;
-
-    void drawSplash(Offset center, double scale) {
-      for (final angle in [-0.8, -0.25, 0.35, 0.9]) {
-        final start = center + Offset(cos(angle), sin(angle)) * 10 * scale;
-        final end = center + Offset(cos(angle), sin(angle)) * 32 * scale;
-        canvas.drawLine(start, end, paint);
-      }
-      canvas.drawCircle(
-          center + Offset(38 * scale, -4 * scale), 4 * scale, paint);
-    }
-
-    final leftX = compact ? 0.30 : 0.22;
-    final rightX = compact ? 0.70 : 0.78;
-    final splashScale = compact ? 0.74 : 1.0;
-
-    drawSplash(
-      Offset(size.width * leftX, size.height * 0.36),
-      splashScale,
-    );
-    drawSplash(
-      Offset(size.width * rightX, size.height * 0.34),
-      splashScale * 0.86,
-    );
-
-    final arrowLeft = Path()
-      ..moveTo(size.width * (compact ? 0.27 : 0.18), size.height * 0.31)
-      ..quadraticBezierTo(
-        size.width * (compact ? 0.21 : 0.13),
-        size.height * 0.38,
-        size.width * leftArrowTipX,
-        size.height * 0.45,
-      )
-      ..moveTo(size.width * leftArrowTipX, size.height * 0.45)
-      ..lineTo(size.width * (compact ? 0.28 : 0.18), size.height * 0.43)
-      ..moveTo(size.width * leftArrowTipX, size.height * 0.45)
-      ..lineTo(size.width * (compact ? 0.30 : 0.21), size.height * 0.40);
-    canvas.drawPath(arrowLeft, paint);
-
-    final arrowRight = Path()
-      ..moveTo(size.width * (compact ? 0.73 : 0.79), size.height * 0.29)
-      ..quadraticBezierTo(
-        size.width * (compact ? 0.79 : 0.91),
-        size.height * 0.35,
-        size.width * (compact ? 0.67 : 0.78),
-        size.height * 0.47,
-      )
-      ..moveTo(size.width * (compact ? 0.67 : 0.78), size.height * 0.47)
-      ..lineTo(size.width * (compact ? 0.73 : 0.84), size.height * 0.44)
-      ..moveTo(size.width * (compact ? 0.67 : 0.78), size.height * 0.47)
-      ..lineTo(size.width * (compact ? 0.71 : 0.82), size.height * 0.40);
-    canvas.drawPath(arrowRight, paint);
-  }
-
-  @override
-  bool shouldRepaint(covariant _ComboPosterDoodlePainter oldDelegate) =>
-      oldDelegate.compact != compact;
-}
-
-class _BurstPainter extends CustomPainter {
-  final Color color;
-
-  const _BurstPainter({required this.color});
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final center = Offset(size.width / 2, size.height / 2);
-    final outer = size.shortestSide / 2;
-    final inner = outer * 0.86;
-    final path = Path();
-    const points = 28;
-    for (var i = 0; i < points * 2; i++) {
-      final angle = -1.5708 + i * 3.14159 / points;
-      final radius = i.isEven ? outer : inner;
-      final point = center + Offset(cos(angle), sin(angle)) * radius;
-      if (i == 0) {
-        path.moveTo(point.dx, point.dy);
-      } else {
-        path.lineTo(point.dx, point.dy);
-      }
-    }
-    path.close();
-    canvas.drawPath(path, Paint()..color = color);
-  }
-
-  @override
-  bool shouldRepaint(covariant _BurstPainter oldDelegate) =>
-      oldDelegate.color != color;
-}
-
-String _comboItemDetail(
-  ComboOfferItem item, {
-  required bool showQuantity,
-}) {
+String _comboItemDetail(ComboOfferItem item, {required bool showQuantity}) {
   if (!showQuantity) return '';
-
   final selectedLabel = item.variantLabel?.trim();
   final quantity = 'x${item.quantity}';
-  String withQuantity(String value) {
-    return value.isEmpty ? quantity : '$value  $quantity';
-  }
+  String withQuantity(String value) =>
+      value.isEmpty ? quantity : '$value  $quantity';
 
   if (selectedLabel != null && selectedLabel.isNotEmpty) {
     return withQuantity(selectedLabel);
   }
-
   if (item.variantPrice != null) {
     for (final variant in item.product.priceVariants) {
       if ((variant.price - item.variantPrice!).abs() < 0.01 &&
@@ -1166,17 +1400,15 @@ String _comboItemDetail(
       }
     }
   }
-
   if (item.product.priceVariants.isNotEmpty) {
     final fullVariant = item.product.priceVariants
-        .where((variant) => variant.label.trim().toLowerCase() == 'full')
+        .where((v) => v.label.trim().toLowerCase() == 'full')
         .cast<PriceVariant?>()
-        .firstWhere((variant) => variant != null, orElse: () => null);
+        .firstWhere((_) => true, orElse: () => null);
     if (fullVariant != null) return withQuantity(fullVariant.label.trim());
     final fallback = item.product.priceVariants.last.label.trim();
     if (fallback.isNotEmpty) return withQuantity(fallback);
   }
-
   return quantity;
 }
 
@@ -1186,18 +1418,13 @@ double _comboDisplayOriginalPrice(MenuItem combo) {
   return max(payloadOriginal, computed);
 }
 
-double _comboOriginalPrice(MenuItem combo) {
-  return combo.comboItems.fold<double>(
-    0,
-    (total, item) => total + _comboItemUnitPrice(item) * item.quantity,
-  );
-}
+double _comboOriginalPrice(MenuItem combo) => combo.comboItems.fold<double>(
+    0, (total, item) => total + _comboItemUnitPrice(item) * item.quantity);
 
 double _comboItemUnitPrice(ComboOfferItem item) {
   if (item.variantPrice != null && item.variantPrice! > 0) {
     return item.variantPrice!;
   }
-
   final selectedLabel = item.variantLabel?.trim().toLowerCase();
   if (selectedLabel != null && selectedLabel.isNotEmpty) {
     for (final variant in item.product.priceVariants) {
@@ -1206,18 +1433,15 @@ double _comboItemUnitPrice(ComboOfferItem item) {
       }
     }
   }
-
   if (item.product.price > 0) return item.product.price;
-
   if (item.product.priceVariants.isNotEmpty) {
     final fullVariant = item.product.priceVariants
-        .where((variant) => variant.label.trim().toLowerCase() == 'full')
+        .where((v) => v.label.trim().toLowerCase() == 'full')
         .cast<PriceVariant?>()
-        .firstWhere((variant) => variant != null, orElse: () => null);
+        .firstWhere((_) => true, orElse: () => null);
     if (fullVariant != null) return fullVariant.price;
     return item.product.priceVariants.last.price;
   }
-
   return item.product.price;
 }
 
