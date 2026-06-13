@@ -119,13 +119,15 @@ class _RootScreenState extends State<RootScreen> {
     }
 
     if (display.mode == DisplayMode.media) {
+      final usesBackendMedia =
+          _contentModesFrom(display.contentMode).contains('media');
       return LayoutBuilder(
         builder: (context, constraints) {
           final screenSize = Size(constraints.maxWidth, constraints.maxHeight);
           final media = MediaScreen(
             mediaUrl: display.mediaUrl ?? '',
             mediaType: display.mediaType ?? 'image',
-            mediaItems: display.mediaItems,
+            mediaItems: usesBackendMedia ? display.mediaItems : const [],
             slideDurationSeconds: display.autoScrollIntervalSeconds ?? 8,
             transitionStyle: display.transitionStyle,
             transitionSpeedSeconds: display.transitionSpeedSeconds,
@@ -315,7 +317,6 @@ class _MixedDisplayScreen extends StatefulWidget {
 }
 
 class _MixedDisplayScreenState extends State<_MixedDisplayScreen> {
-  Timer? _timer;
   int _index = 0;
   List<DisplayMediaItem> _localMediaItems = const [];
   bool _isScanningLocalMedia = false;
@@ -323,7 +324,8 @@ class _MixedDisplayScreenState extends State<_MixedDisplayScreen> {
   List<String> get _contentModes =>
       _contentModesFrom(widget.display.contentMode);
 
-  bool get _usesBackendMedia => _contentModes.contains('media');
+  bool get _usesBackendMedia =>
+      _contentModes.contains('media') && !_contentModes.contains('allMedia');
 
   List<DisplayMediaItem> get _availableMediaItems =>
       _usesBackendMedia && widget.display.mediaItems.isNotEmpty
@@ -336,7 +338,6 @@ class _MixedDisplayScreenState extends State<_MixedDisplayScreen> {
   void initState() {
     super.initState();
     _scanLocalMediaIfNeeded();
-    _startTimer();
   }
 
   @override
@@ -349,31 +350,22 @@ class _MixedDisplayScreenState extends State<_MixedDisplayScreen> {
             widget.display.mediaItems.length) {
       _index = 0;
       _scanLocalMediaIfNeeded();
-      _startTimer();
     }
   }
 
   @override
   void dispose() {
-    _timer?.cancel();
     super.dispose();
-  }
-
-  void _startTimer() {
-    _timer?.cancel();
-    if (!_hasMediaContent || _index == 0) return;
-    final seconds = widget.display.autoScrollIntervalSeconds ?? 8;
-    _timer = Timer.periodic(Duration(seconds: seconds < 6 ? 6 : seconds), (_) {
-      if (!mounted) return;
-      setState(() => _index = 0);
-      _timer?.cancel();
-    });
   }
 
   void _showMediaAfterMenuCycle() {
     if (!_hasMediaContent || _index == 1) return;
     setState(() => _index = 1);
-    _startTimer();
+  }
+
+  void _showMenuAfterMediaCycle() {
+    if (!mounted || _index == 0) return;
+    setState(() => _index = 0);
   }
 
   Future<void> _scanLocalMediaIfNeeded() async {
@@ -387,7 +379,6 @@ class _MixedDisplayScreenState extends State<_MixedDisplayScreen> {
         _localMediaItems = items;
         if (items.isEmpty) _index = 0;
       });
-      _startTimer();
     } catch (_) {
       if (!mounted) return;
       setState(() {
@@ -406,6 +397,7 @@ class _MixedDisplayScreenState extends State<_MixedDisplayScreen> {
       displayConfig: widget.display,
       screenSize: widget.screenSize,
       initialRevealDelay: const Duration(milliseconds: 550),
+      isActive: _index == 0,
       onCycleComplete: _showMediaAfterMenuCycle,
     );
 
@@ -424,6 +416,8 @@ class _MixedDisplayScreenState extends State<_MixedDisplayScreen> {
       businessLogoUrl: widget.config.businessLogoUrl,
       showLogo: widget.display.showLogo,
       showCompanyName: widget.display.showCompanyName,
+      isActive: _index == 1,
+      onPlaylistCycleComplete: _showMenuAfterMediaCycle,
     );
 
     return IndexedStack(

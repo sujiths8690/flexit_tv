@@ -44,6 +44,7 @@ class MenuBoardScreen extends StatefulWidget {
   final DisplayConfig displayConfig;
   final Size screenSize;
   final Duration initialRevealDelay;
+  final bool isActive;
   final VoidCallback? onCycleComplete;
 
   const MenuBoardScreen({
@@ -52,6 +53,7 @@ class MenuBoardScreen extends StatefulWidget {
     required this.displayConfig,
     required this.screenSize,
     this.initialRevealDelay = Duration.zero,
+    this.isActive = true,
     this.onCycleComplete,
   });
 
@@ -150,6 +152,16 @@ class _MenuBoardScreenState extends State<MenuBoardScreen>
   @override
   void didUpdateWidget(MenuBoardScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
+    if (oldWidget.isActive != widget.isActive) {
+      if (widget.isActive) {
+        _bgCtrl.repeat();
+        if (_contentReady) _startPageTimer();
+      } else {
+        _pageTimer?.cancel();
+        _pageTimer = null;
+        _bgCtrl.stop();
+      }
+    }
     if (oldWidget.displayConfig.menuCategory !=
             widget.displayConfig.menuCategory ||
         oldWidget.displayConfig.themeOverride !=
@@ -331,6 +343,7 @@ class _MenuBoardScreenState extends State<MenuBoardScreen>
   }
 
   void _startPageTimer() {
+    if (!widget.isActive) return;
     final interval = widget.displayConfig.autoScrollIntervalSeconds ?? 8;
     _pageTimer?.cancel();
     _pageTimer = Timer.periodic(Duration(seconds: interval), (_) {

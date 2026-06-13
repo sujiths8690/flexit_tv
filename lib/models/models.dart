@@ -204,7 +204,8 @@ class DisplayConfig {
       transitionStyle: json['transitionStyle'] as String? ?? 'fade',
       transitionSpeedSeconds:
           (json['transitionSpeedSeconds'] as num?)?.toDouble() ?? 0.5,
-      autoScrollIntervalSeconds: json['autoScrollIntervalSeconds'] as int?,
+      autoScrollIntervalSeconds:
+          _parseNullableInt(json['autoScrollIntervalSeconds']),
       scheduleEnabled: json['scheduleEnabled'] as bool? ?? false,
       alwaysOn: json['alwaysOn'] as bool? ?? true,
       scheduleStartTime: json['scheduleStartTime'] as String? ?? '09:00',
@@ -263,6 +264,13 @@ class DisplayConfig {
         'menuItems': menuItems.map((item) => item.toJson()).toList(),
         'notices': notices.map((notice) => notice.toJson()).toList(),
       };
+}
+
+int? _parseNullableInt(dynamic value) {
+  if (value is int) return value;
+  if (value is num) return value.toInt();
+  if (value is String) return int.tryParse(value);
+  return null;
 }
 
 class DisplayMediaItem {

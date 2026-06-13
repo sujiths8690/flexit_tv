@@ -1,14 +1,19 @@
 package com.flexit.display
 
 import android.Manifest
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.media.MediaMetadataRetriever
 import android.provider.Settings
 import android.os.Build
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.embedding.android.FlutterActivity
 import io.flutter.plugin.common.MethodChannel
 import java.io.File
+import java.io.FileOutputStream
 import java.net.Inet4Address
 import java.net.NetworkInterface
+import java.security.MessageDigest
 import java.util.Collections
 import java.util.Locale
 
@@ -132,15 +137,13 @@ class MainActivity : FlutterActivity() {
         File("/storage").listFiles()?.forEach { root ->
             if (!root.isDirectory) return@forEach
             if (root.name.equals("emulated", ignoreCase = true)) return@forEach
-            folders.add(File(root, "flexit/media"))
-            folders.add(File(root, "Flexit/media"))
-            folders.add(File(root, "FLEXIT/media"))
+            folders.addMediaFolders(root)
         }
 
         getExternalFilesDirs(null).filterNotNull().forEach { appDir ->
-            folders.add(File(appDir, "flexit/media"))
-            appDir.parentFile?.parentFile?.parentFile?.let { volumeRoot ->
-                folders.add(File(volumeRoot, "flexit/media"))
+            externalVolumeRoot(appDir)?.let { volumeRoot ->
+                if (volumeRoot.isEmulatedStorage()) return@let
+                folders.addMediaFolders(volumeRoot)
             }
         }
 
@@ -149,20 +152,51 @@ class MainActivity : FlutterActivity() {
             .flatMap { folder ->
                 folder.walkTopDown()
                     .maxDepth(2)
-                    .filter { it.isFile && it.isSupportedMedia() }
+                    .filter {
+                        it.isFile &&
+                            it.isSupportedMedia() &&
+                            it.hasUsableSize() &&
+                            it.isAllowedDuration()
+                    }
                     .toList()
             }
             .distinctBy { it.absolutePath }
             .sortedBy { it.name.lowercase() }
 
         return files.mapIndexed { index, file ->
+            val playbackFile = file.playbackFile()
             mapOf(
                 "id" to -1 - index,
                 "fileName" to file.name,
-                "url" to file.toURI().toString(),
+                "url" to playbackFile.toURI().toString(),
                 "type" to file.mediaType()
             )
         }
+    }
+
+    private fun MutableSet<File>.addMediaFolders(root: File) {
+        foldersFor(root).forEach { add(it) }
+    }
+
+    private fun foldersFor(root: File): List<File> {
+        val appFolders = listOf("flexit", "Flexit", "FLEXIT")
+        val mediaFolders = listOf("media", "Media", "MEDIA")
+        return appFolders.flatMap { appFolder ->
+            mediaFolders.map { mediaFolder -> File(root, "$appFolder/$mediaFolder") }
+        }
+    }
+
+    private fun externalVolumeRoot(appDir: File): File? {
+        var current: File? = appDir
+        repeat(4) {
+            current = current?.parentFile
+        }
+        return current
+    }
+
+    private fun File.isEmulatedStorage(): Boolean {
+        val path = absolutePath.lowercase()
+        return path == "/storage/emulated" || path.startsWith("/storage/emulated/")
     }
 
     private fun requestLocalMediaPermissions() {
@@ -192,6 +226,41 @@ class MainActivity : FlutterActivity() {
             name.endsWith(".mkv")
     }
 
+    private fun File.hasUsableSize(): Boolean {
+        val name = this.name.lowercase()
+        val minBytes = if (
+            name.endsWith(".mp4") ||
+            name.endsWith(".m4v") ||
+            name.endsWith(".mov") ||
+            name.endsWith(".mkv")
+        ) {
+            1024L
+        } else {
+            512L
+        }
+        return length() >= minBytes
+    }
+
+    private fun File.isAllowedDuration(): Boolean {
+        if (mediaType() != "video") return true
+        val durationMs = videoDurationMs() ?: return false
+        return durationMs <= 60_000L
+    }
+
+    private fun File.videoDurationMs(): Long? {
+        return try {
+            val retriever = MediaMetadataRetriever()
+            retriever.setDataSource(absolutePath)
+            val raw = retriever.extractMetadata(
+                MediaMetadataRetriever.METADATA_KEY_DURATION
+            )
+            retriever.release()
+            raw?.toLongOrNull()
+        } catch (_: Exception) {
+            null
+        }
+    }
+
     private fun File.mediaType(): String {
         val name = this.name.lowercase()
         return if (
@@ -204,5 +273,69 @@ class MainActivity : FlutterActivity() {
         } else {
             "image"
         }
+    }
+
+    private fun File.playbackFile(): File {
+        if (mediaType() != "image") return this
+        return downscaledImageFile(this) ?: this
+    }
+
+    private fun downscaledImageFile(source: File): File? {
+        return try {
+            val outputDir = File(cacheDir, "flexit_media_cache").apply { mkdirs() }
+            val output = File(outputDir, "${source.cacheKey()}.jpg")
+            if (output.exists() && output.length() > 1024L) return output
+
+            val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+            BitmapFactory.decodeFile(source.absolutePath, bounds)
+            val sourceWidth = bounds.outWidth
+            val sourceHeight = bounds.outHeight
+            if (sourceWidth <= 0 || sourceHeight <= 0) return null
+
+            val targetWidth = 1920
+            val targetHeight = 1080
+            val options = BitmapFactory.Options().apply {
+                inSampleSize = sampleSizeFor(sourceWidth, sourceHeight, targetWidth, targetHeight)
+                inPreferredConfig = Bitmap.Config.ARGB_8888
+            }
+
+            val bitmap = BitmapFactory.decodeFile(source.absolutePath, options) ?: return null
+            val scaled = bitmap.scaledToFit(targetWidth, targetHeight)
+            FileOutputStream(output).use { stream ->
+                scaled.compress(Bitmap.CompressFormat.JPEG, 95, stream)
+            }
+            if (scaled !== bitmap) scaled.recycle()
+            bitmap.recycle()
+            output
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    private fun sampleSizeFor(
+        width: Int,
+        height: Int,
+        targetWidth: Int,
+        targetHeight: Int
+    ): Int {
+        var sample = 1
+        while ((width / sample) > targetWidth * 2 || (height / sample) > targetHeight * 2) {
+            sample *= 2
+        }
+        return sample
+    }
+
+    private fun Bitmap.scaledToFit(maxWidth: Int, maxHeight: Int): Bitmap {
+        if (width <= maxWidth && height <= maxHeight) return this
+        val scale = minOf(maxWidth.toFloat() / width, maxHeight.toFloat() / height)
+        val scaledWidth = (width * scale).toInt().coerceAtLeast(1)
+        val scaledHeight = (height * scale).toInt().coerceAtLeast(1)
+        return Bitmap.createScaledBitmap(this, scaledWidth, scaledHeight, true)
+    }
+
+    private fun File.cacheKey(): String {
+        val raw = "image-cache-v2-1080p-q95:$absolutePath:${length()}:${lastModified()}"
+        val digest = MessageDigest.getInstance("SHA-1").digest(raw.toByteArray())
+        return digest.joinToString("") { "%02x".format(it.toInt() and 0xff) }
     }
 }
