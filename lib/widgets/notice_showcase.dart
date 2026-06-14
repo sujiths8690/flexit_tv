@@ -50,68 +50,82 @@ class _NoticePoster extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final width = screenSize.width;
-    final height = screenSize.height;
-    final isPortrait = height >= width;
-    final shortest = min(width, height);
-    final megaphoneWidth = _clampDouble(
-      isPortrait ? width * 0.70 : width * 0.34,
-      210,
-      620,
-    );
-    final megaphoneHeight = megaphoneWidth * 0.72;
-    final bannerWidth = width * (isPortrait ? 0.92 : 0.82);
-    final bannerHeight = _clampDouble(height * 0.22, 118, 260);
-    final bannerTop = height * (isPortrait ? 0.42 : 0.38);
-    final contentTop = bannerTop + bannerHeight + height * 0.07;
-    final contentBottom = height * 0.06;
-    final contentHeight = max(90.0, height - contentTop - contentBottom);
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        final width = constraints.maxWidth.isFinite
+            ? constraints.maxWidth
+            : screenSize.width;
+        final height = constraints.maxHeight.isFinite
+            ? constraints.maxHeight
+            : screenSize.height;
+        final isPortrait = height >= width;
+        final shortest = min(width, height);
 
-    return ColoredBox(
-      color: const Color(0xFF42A7D0),
-      child: Stack(
-        fit: StackFit.expand,
-        children: [
-          const DecoratedBox(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: [Color(0xFF3E9FC7), Color(0xFF53B5DD)],
+        final megaphoneWidth = min(
+          isPortrait ? width * 0.70 : width * 0.34,
+          height * (isPortrait ? 0.32 : 0.34) / 0.72,
+        );
+        final megaphoneHeight = megaphoneWidth * 0.72;
+        final bannerWidth = width * (isPortrait ? 0.92 : 0.88);
+        final bannerHeight = isPortrait
+            ? _clampDouble(height * 0.22, 118, 260)
+            : min(height * 0.24, bannerWidth * 0.16);
+        final bannerTop = isPortrait ? height * 0.42 : height * 0.36;
+        final contentTop =
+            bannerTop + bannerHeight + height * (isPortrait ? 0.07 : 0.055);
+        final contentBottom = height * 0.06;
+        final availableContentHeight = height - contentTop - contentBottom;
+        final contentHeight = isPortrait
+            ? max(90.0, availableContentHeight)
+            : max(0.0, availableContentHeight);
+
+        return ColoredBox(
+          color: const Color(0xFF42A7D0),
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              const DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [Color(0xFF3E9FC7), Color(0xFF53B5DD)],
+                  ),
+                ),
               ),
-            ),
+              Positioned(
+                top: height * 0.035,
+                left: isPortrait ? width * 0.10 : (width - megaphoneWidth) / 2,
+                width: megaphoneWidth,
+                height: megaphoneHeight,
+                child: Image.asset(
+                  'assets/loudspeaker/loudspeaker-icon.png',
+                  fit: BoxFit.contain,
+                ),
+              ),
+              Positioned(
+                top: bannerTop,
+                left: (width - bannerWidth) / 2,
+                width: bannerWidth,
+                height: bannerHeight,
+                child: const _AnnouncementBanner(),
+              ),
+              Positioned(
+                top: contentTop,
+                left: width * (isPortrait ? 0.10 : 0.14),
+                right: width * (isPortrait ? 0.10 : 0.14),
+                height: contentHeight,
+                child: _NoticeBodyText(
+                  noticeId: notice.id,
+                  content: notice.content,
+                  fontSize: _clampDouble(shortest * 0.052, 26, 54),
+                  transitionDuration: transitionDuration,
+                ),
+              ),
+            ],
           ),
-          Positioned(
-            top: height * 0.035,
-            left: isPortrait ? width * 0.10 : width * 0.30,
-            width: megaphoneWidth,
-            height: megaphoneHeight,
-            child: Image.asset(
-              'assets/loudspeaker/loudspeaker-icon.png',
-              fit: BoxFit.contain,
-            ),
-          ),
-          Positioned(
-            top: bannerTop,
-            left: (width - bannerWidth) / 2,
-            width: bannerWidth,
-            height: bannerHeight,
-            child: const _AnnouncementBanner(),
-          ),
-          Positioned(
-            top: contentTop,
-            left: width * (isPortrait ? 0.10 : 0.14),
-            right: width * (isPortrait ? 0.10 : 0.14),
-            height: contentHeight,
-            child: _NoticeBodyText(
-              noticeId: notice.id,
-              content: notice.content,
-              fontSize: _clampDouble(shortest * 0.052, 26, 54),
-              transitionDuration: transitionDuration,
-            ),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 }

@@ -1002,40 +1002,48 @@ class _DiscountOfferProductGrid extends StatelessWidget {
         constraints: BoxConstraints(maxWidth: maxWidth),
         child: LayoutBuilder(
           builder: (context, constraints) {
-            final gap = (constraints.maxWidth * 0.025).clamp(14.0, 28.0);
             final tileWidth = constraints.maxWidth;
-            final tileHeight =
-                (constraints.maxWidth * 0.20).clamp(170.0, 320.0);
             final offerItems = items.isEmpty ? <ComboOfferItem>[] : items;
+            final tileCount = max(1, offerItems.length);
+            final preferredGap =
+                (constraints.maxWidth * 0.025).clamp(14.0, 28.0);
+            final maxGapForHeight = tileCount > 1
+                ? constraints.maxHeight * 0.10 / (tileCount - 1)
+                : 0.0;
+            final gap =
+                tileCount > 1 ? min(preferredGap, maxGapForHeight) : 0.0;
+            final availableTileHeight =
+                (constraints.maxHeight - gap * (tileCount - 1)) / tileCount;
+            final preferredTileHeight =
+                (constraints.maxWidth * 0.20).clamp(170.0, 320.0);
+            final tileHeight = min(preferredTileHeight, availableTileHeight);
 
-            return SingleChildScrollView(
-              physics: const NeverScrollableScrollPhysics(),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: items.isEmpty
-                    ? [
-                        _DiscountOfferSingleTile(
-                          offer: offer,
+            return Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisSize: MainAxisSize.max,
+              children: items.isEmpty
+                  ? [
+                      _DiscountOfferSingleTile(
+                        offer: offer,
+                        width: tileWidth,
+                        height: tileHeight,
+                        showProductImage: showProductImage,
+                        showPrice: showPrice,
+                      ),
+                    ]
+                  : [
+                      for (var i = 0; i < offerItems.length; i++) ...[
+                        _DiscountOfferItemTile(
+                          item: offerItems[i],
                           width: tileWidth,
                           height: tileHeight,
+                          imageOnLeft: i.isEven,
                           showProductImage: showProductImage,
                           showPrice: showPrice,
                         ),
-                      ]
-                    : [
-                        for (var i = 0; i < offerItems.length; i++) ...[
-                          _DiscountOfferItemTile(
-                            item: offerItems[i],
-                            width: tileWidth,
-                            height: tileHeight,
-                            imageOnLeft: i.isEven,
-                            showProductImage: showProductImage,
-                            showPrice: showPrice,
-                          ),
-                          if (i != offerItems.length - 1) SizedBox(height: gap),
-                        ],
+                        if (i != offerItems.length - 1) SizedBox(height: gap),
                       ],
-              ),
+                    ],
             );
           },
         ),
@@ -1135,9 +1143,18 @@ class _DiscountOfferTileShell extends StatelessWidget {
   Widget build(BuildContext context) {
     final canShowImage = showProductImage && imageUrl != null;
     final imageSide = canShowImage ? min(height * 0.84, width * 0.26) : 0.0;
-    final nameSize = (width * 0.045).clamp(28.0, 58.0);
-    final mainPriceSize = (width * 0.024).clamp(18.0, 34.0);
-    final offerPriceSize = (width * 0.038).clamp(28.0, 52.0);
+    final nameSize = min(
+      (width * 0.045).clamp(28.0, 58.0),
+      (height * 0.28).clamp(20.0, 58.0),
+    );
+    final mainPriceSize = min(
+      (width * 0.024).clamp(18.0, 34.0),
+      (height * 0.15).clamp(14.0, 34.0),
+    );
+    final offerPriceSize = min(
+      (width * 0.038).clamp(28.0, 52.0),
+      (height * 0.23).clamp(22.0, 52.0),
+    );
     final imageGap = (width * 0.035).clamp(22.0, 44.0);
     final imageBlock = canShowImage
         ? SizedBox(
@@ -1173,7 +1190,12 @@ class _DiscountOfferTileShell extends StatelessWidget {
             ),
           ),
           if (showPrice) ...[
-            SizedBox(height: (width * 0.010).clamp(8.0, 16.0)),
+            SizedBox(
+              height: min(
+                (width * 0.010).clamp(8.0, 16.0),
+                (height * 0.05).clamp(4.0, 12.0),
+              ),
+            ),
             Text(
               'Rs ${mainPrice.toStringAsFixed(0)}',
               maxLines: 1,
@@ -1187,7 +1209,12 @@ class _DiscountOfferTileShell extends StatelessWidget {
                 height: 1,
               ),
             ),
-            SizedBox(height: (width * 0.004).clamp(3.0, 8.0)),
+            SizedBox(
+              height: min(
+                (width * 0.004).clamp(3.0, 8.0),
+                (height * 0.025).clamp(2.0, 6.0),
+              ),
+            ),
             FittedBox(
               fit: BoxFit.scaleDown,
               alignment:
@@ -1214,7 +1241,10 @@ class _DiscountOfferTileShell extends StatelessWidget {
       child: Padding(
         padding: EdgeInsets.symmetric(
           horizontal: (width * 0.014).clamp(12.0, 26.0),
-          vertical: (width * 0.010).clamp(8.0, 18.0),
+          vertical: min(
+            (width * 0.010).clamp(8.0, 18.0),
+            (height * 0.04).clamp(4.0, 12.0),
+          ),
         ),
         child: Row(
           children: imageOnLeft
