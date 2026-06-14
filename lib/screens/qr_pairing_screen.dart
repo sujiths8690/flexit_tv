@@ -2,8 +2,7 @@
 //
 // Shown when the display device is not yet paired. Displays:
 //   • The device's unique QR code (encodes deviceCode)
-//   • A friendly animated mascot at the bottom
-//   • Rotating instruction prompts
+//   • Short rotating pairing instructions
 
 import 'dart:convert';
 import 'dart:math';
@@ -34,33 +33,21 @@ class QrPairingScreen extends StatefulWidget {
 }
 
 class _QrPairingScreenState extends State<QrPairingScreen>
-    with TickerProviderStateMixin {
-  late AnimationController _pulseCtrl;
+    with SingleTickerProviderStateMixin {
   late AnimationController _slideCtrl;
-  late Animation<double> _pulseAnim;
   late Animation<Offset> _slideAnim;
   late Animation<double> _fadeAnim;
 
   int _tipIndex = 0;
   static const List<String> _tips = [
-    'Open your flexit app',
-    'Tap  +  and choose "Add Display"',
-    'Scan the QR code or enter the device code',
-    "That's it — your menu goes live!",
+    'Open Flexit and go to Manage Devices',
+    'Tap the QR button and scan this code',
+    'Name the TV, then tap Add Display',
   ];
 
   @override
   void initState() {
     super.initState();
-
-    _pulseCtrl = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 2),
-    )..repeat(reverse: true);
-
-    _pulseAnim = Tween<double>(begin: 1.0, end: 1.06).animate(
-      CurvedAnimation(parent: _pulseCtrl, curve: Curves.easeInOut),
-    );
 
     _slideCtrl = AnimationController(
       vsync: this,
@@ -90,7 +77,6 @@ class _QrPairingScreenState extends State<QrPairingScreen>
 
   @override
   void dispose() {
-    _pulseCtrl.dispose();
     _slideCtrl.dispose();
     super.dispose();
   }
@@ -152,7 +138,8 @@ class _QrPairingScreenState extends State<QrPairingScreen>
         final titleSize =
             veryCompactHeight ? 30.0 : (compactHeight ? 34.0 : 42.0);
         final tipSize = compactHeight ? 17.0 : 20.0;
-        final logoSize = compactHeight ? 46.0 : 56.0;
+        final logoWidth = compactHeight ? 112.0 : 140.0;
+        final logoHeight = compactHeight ? 44.0 : 56.0;
         final qrSize = min(
           constraints.maxHeight * (compactHeight ? 0.50 : 0.55),
           compactHeight ? 280.0 : 320.0,
@@ -173,28 +160,14 @@ class _QrPairingScreenState extends State<QrPairingScreen>
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    // Logo mark
-                    Container(
-                      width: logoSize,
-                      height: logoSize,
-                      decoration: BoxDecoration(
-                        borderRadius:
-                            BorderRadius.circular(compactHeight ? 12 : 14),
-                        gradient: const LinearGradient(
-                          colors: [AppTheme.gold, AppTheme.goldDim],
-                        ),
-                      ),
-                      child: Center(
-                        child: Text(
-                          'M',
-                          style: TextStyle(
-                            fontFamily:
-                                GoogleFonts.playfairDisplay().fontFamily,
-                            fontSize: compactHeight ? 25 : 30,
-                            color: AppTheme.background,
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
+                    ClipRRect(
+                      borderRadius:
+                          BorderRadius.circular(compactHeight ? 10 : 12),
+                      child: Image.asset(
+                        'assets/branding/flexit-logo.png',
+                        width: logoWidth,
+                        height: logoHeight,
+                        fit: BoxFit.cover,
                       ),
                     ),
                     SizedBox(height: compactHeight ? 16 : 32),
@@ -245,16 +218,18 @@ class _QrPairingScreenState extends State<QrPairingScreen>
                     SizedBox(height: compactHeight ? 22 : 40),
                     // Device code pill
                     _DeviceCodeBadge(code: widget.deviceCode),
-                    SizedBox(height: compactHeight ? 8 : 12),
-                    _RealtimeStatusBadge(status: widget.realtimeStatus),
-                    SizedBox(height: compactHeight ? 8 : 10),
-                    Flexible(
-                      child: _ConnectionDetails(
-                        configStatus: widget.configStatus,
-                        backendEndpoint: widget.backendEndpoint,
-                        realtimeEndpoint: widget.realtimeEndpoint,
-                      ),
-                    ),
+                    // Debug connection details intentionally hidden from the
+                    // customer-facing pairing screen.
+                    // SizedBox(height: compactHeight ? 8 : 12),
+                    // _RealtimeStatusBadge(status: widget.realtimeStatus),
+                    // SizedBox(height: compactHeight ? 8 : 10),
+                    // Flexible(
+                    //   child: _ConnectionDetails(
+                    //     configStatus: widget.configStatus,
+                    //     backendEndpoint: widget.backendEndpoint,
+                    //     realtimeEndpoint: widget.realtimeEndpoint,
+                    //   ),
+                    // ),
                   ],
                 ),
               ),
@@ -268,12 +243,9 @@ class _QrPairingScreenState extends State<QrPairingScreen>
                 verticalPadding,
               ),
               child: Center(
-                child: ScaleTransition(
-                  scale: _pulseAnim,
-                  child: QrCodeWidget(
-                    data: _qrData(),
-                    size: qrSize,
-                  ),
+                child: QrCodeWidget(
+                  data: _qrData(),
+                  size: qrSize,
                 ),
               ),
             ),
@@ -299,7 +271,7 @@ class _QrPairingScreenState extends State<QrPairingScreen>
         ),
         const SizedBox(height: 8),
         Text(
-          'Scan with your flexit app',
+          'Devices > QR scanner > Name TV > Add Display',
           style: TextStyle(
             fontFamily: GoogleFonts.nunito().fontFamily,
             fontSize: 16,
@@ -307,23 +279,22 @@ class _QrPairingScreenState extends State<QrPairingScreen>
           ),
         ),
         const SizedBox(height: 40),
-        ScaleTransition(
-          scale: _pulseAnim,
-          child: QrCodeWidget(
-            data: _qrData(),
-            size: min(size.width * 0.55, 280),
-          ),
+        QrCodeWidget(
+          data: _qrData(),
+          size: min(size.width * 0.55, 280),
         ),
         const SizedBox(height: 32),
         _DeviceCodeBadge(code: widget.deviceCode),
-        const SizedBox(height: 12),
-        _RealtimeStatusBadge(status: widget.realtimeStatus),
-        const SizedBox(height: 10),
-        _ConnectionDetails(
-          configStatus: widget.configStatus,
-          backendEndpoint: widget.backendEndpoint,
-          realtimeEndpoint: widget.realtimeEndpoint,
-        ),
+        // Debug connection details intentionally hidden from the
+        // customer-facing pairing screen.
+        // const SizedBox(height: 12),
+        // _RealtimeStatusBadge(status: widget.realtimeStatus),
+        // const SizedBox(height: 10),
+        // _ConnectionDetails(
+        //   configStatus: widget.configStatus,
+        //   backendEndpoint: widget.backendEndpoint,
+        //   realtimeEndpoint: widget.realtimeEndpoint,
+        // ),
         const SizedBox(height: 24),
         SlideTransition(
           position: _slideAnim,
@@ -360,6 +331,7 @@ class _QrPairingScreenState extends State<QrPairingScreen>
   }
 }
 
+// ignore: unused_element
 class _ConnectionDetails extends StatelessWidget {
   final String configStatus;
   final String backendEndpoint;
@@ -386,6 +358,7 @@ class _ConnectionDetails extends StatelessWidget {
   }
 }
 
+// ignore: unused_element
 class _RealtimeStatusBadge extends StatelessWidget {
   final String status;
   const _RealtimeStatusBadge({required this.status});
