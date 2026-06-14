@@ -43,3 +43,4 @@ flutter:
     - .env
     - assets/character/namaste.webm
     - assets/loudspeaker/loudspeaker-icon.png
+    - assets/branding/flexit-logo.png
