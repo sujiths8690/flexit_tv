@@ -14,6 +14,7 @@ import '../widgets/combo_offer_showcase.dart';
 import '../widgets/menu_item_row.dart';
 import '../widgets/notice_showcase.dart';
 import '../widgets/offer_showcase.dart';
+import '../widgets/todays_star_showcase.dart';
 
 List<String> _contentModesFrom(String value) {
   final modes = value
@@ -557,7 +558,7 @@ class _MenuBoardScreenState extends State<MenuBoardScreen>
                                               : null,
                                     )
                                   : _activeContentMode == 'todaysStar'
-                                      ? _TodaysStarShowcase(
+                                      ? TodaysStarShowcase(
                                           items: _items,
                                           pageIndex: _pageIndex,
                                           screenSize: widget.screenSize,
@@ -687,6 +688,8 @@ String _localizedMenuText(String language, String key) {
   };
 }
 
+// Kept temporarily as the legacy renderer while the poster widget is isolated.
+// ignore: unused_element
 class _TodaysStarShowcase extends StatelessWidget {
   final List<MenuItem> items;
   final int pageIndex;
