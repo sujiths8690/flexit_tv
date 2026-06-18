@@ -1,3 +1,5 @@
+// ignore_for_file: unused_element
+
 // lib/screens/root_screen.dart
 //
 // Listens to DeviceService and routes to:
@@ -6,10 +8,12 @@
 //   • MenuBoardScreen    — paired, mode == menuBoard
 
 import 'dart:async';
+import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 import '../services/device_service.dart';
 import '../models/models.dart';
 import '../services/local_media_service.dart';
@@ -121,27 +125,31 @@ class _RootScreenState extends State<RootScreen> {
     if (display.mode == DisplayMode.media) {
       final usesBackendMedia =
           _contentModesFrom(display.contentMode).contains('media');
-      return LayoutBuilder(
-        builder: (context, constraints) {
-          final screenSize = Size(constraints.maxWidth, constraints.maxHeight);
-          final media = MediaScreen(
-            mediaUrl: display.mediaUrl ?? '',
-            mediaType: display.mediaType ?? 'image',
-            mediaItems: usesBackendMedia ? display.mediaItems : const [],
-            slideDurationSeconds: display.autoScrollIntervalSeconds ?? 8,
-            transitionStyle: display.transitionStyle,
-            transitionSpeedSeconds: display.transitionSpeedSeconds,
-            businessName: config.businessName,
-            businessLogoUrl: config.businessLogoUrl,
-            showLogo: display.showLogo,
-            showCompanyName: display.showCompanyName,
-          );
-          return OrientationHelper.applyTransform(
-            orientation: config.orientation,
-            screenSize: screenSize,
-            child: media,
-          );
-        },
+      return _SubscriptionGate(
+        expired: service.isSubscriptionExpired,
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final screenSize =
+                Size(constraints.maxWidth, constraints.maxHeight);
+            final media = MediaScreen(
+              mediaUrl: display.mediaUrl ?? '',
+              mediaType: display.mediaType ?? 'image',
+              mediaItems: usesBackendMedia ? display.mediaItems : const [],
+              slideDurationSeconds: display.autoScrollIntervalSeconds ?? 8,
+              transitionStyle: display.transitionStyle,
+              transitionSpeedSeconds: display.transitionSpeedSeconds,
+              businessName: config.businessName,
+              businessLogoUrl: config.businessLogoUrl,
+              showLogo: display.showLogo,
+              showCompanyName: display.showCompanyName,
+            );
+            return OrientationHelper.applyTransform(
+              orientation: config.orientation,
+              screenSize: screenSize,
+              child: media,
+            );
+          },
+        ),
       );
     }
 
@@ -160,46 +168,53 @@ class _RootScreenState extends State<RootScreen> {
     );
 
     if (hasMediaSection && hasMenuSection) {
-      return LayoutBuilder(
+      return _SubscriptionGate(
+        expired: service.isSubscriptionExpired,
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final screenSize =
+                Size(constraints.maxWidth, constraints.maxHeight);
+            final contentSize = OrientationHelper.contentSizeFor(
+              orientation: config.orientation,
+              screenSize: screenSize,
+            );
+            final mixed = _MixedDisplayScreen(
+              config: config,
+              display: display,
+              screenSize: contentSize,
+            );
+            return OrientationHelper.applyTransform(
+              orientation: config.orientation,
+              screenSize: screenSize,
+              child: mixed,
+            );
+          },
+        ),
+      );
+    }
+
+    return _SubscriptionGate(
+      expired: service.isSubscriptionExpired,
+      child: LayoutBuilder(
         builder: (context, constraints) {
           final screenSize = Size(constraints.maxWidth, constraints.maxHeight);
-          final contentSize = OrientationHelper.contentSizeFor(
+          final menuSize = OrientationHelper.contentSizeFor(
             orientation: config.orientation,
             screenSize: screenSize,
           );
-          final mixed = _MixedDisplayScreen(
+          final menu = MenuBoardScreen(
             config: config,
-            display: display,
-            screenSize: contentSize,
+            displayConfig: display,
+            screenSize: menuSize,
+            initialRevealDelay: const Duration(milliseconds: 550),
           );
           return OrientationHelper.applyTransform(
             orientation: config.orientation,
             screenSize: screenSize,
-            child: mixed,
+            child: menu,
           );
         },
-      );
-    }
-
-    return LayoutBuilder(
-      builder: (context, constraints) {
-        final screenSize = Size(constraints.maxWidth, constraints.maxHeight);
-        final menuSize = OrientationHelper.contentSizeFor(
-          orientation: config.orientation,
-          screenSize: screenSize,
-        );
-        final menu = MenuBoardScreen(
-          config: config,
-          displayConfig: display,
-          screenSize: menuSize,
-          initialRevealDelay: const Duration(milliseconds: 550),
-        );
-        return OrientationHelper.applyTransform(
-          orientation: config.orientation,
-          screenSize: screenSize,
-          child: menu,
-        );
-      },
+      ),
     );
   }
 
@@ -430,6 +445,415 @@ class _MixedDisplayScreenState extends State<_MixedDisplayScreen> {
   }
 }
 
+class _SubscriptionGate extends StatelessWidget {
+  final bool expired;
+  final Widget child;
+
+  const _SubscriptionGate({required this.expired, required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    if (!expired) return child;
+
+    return Stack(
+      fit: StackFit.expand,
+      children: [
+        ImageFiltered(
+          imageFilter: ImageFilter.blur(sigmaX: 8, sigmaY: 8),
+          child: RepaintBoundary(child: child),
+        ),
+        Positioned.fill(
+          child: ColoredBox(
+            color: const Color(0xCC000000),
+            child: Center(
+              child: _ExpiredOverlayCard(
+                maxWidth: MediaQuery.sizeOf(context).width - 64,
+                maxHeight: MediaQuery.sizeOf(context).height - 64,
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _ExpiredOverlayCard extends StatelessWidget {
+  final double maxWidth;
+  final double maxHeight;
+
+  const _ExpiredOverlayCard({
+    required this.maxWidth,
+    required this.maxHeight,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final scale = (maxWidth / 780).clamp(0.65, 1.0);
+
+    return Transform.scale(
+      scale: scale,
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxWidth: 780,
+          maxHeight: maxHeight / scale,
+        ),
+        child: DefaultTextStyle.merge(
+          style: const TextStyle(decoration: TextDecoration.none),
+          child: Container(
+            decoration: BoxDecoration(
+              color: const Color(0xFF17171B),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: const Color(0xFF2E2E38), width: 0.5),
+              boxShadow: const [
+                BoxShadow(
+                  color: Color(0x66000000),
+                  blurRadius: 40,
+                  offset: Offset(0, 16),
+                ),
+              ],
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(20),
+              child: const Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  _ExpiredHeader(),
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(child: _RechargeStepsPanel()),
+                      _PanelDivider(),
+                      Expanded(child: _RechargeQrPanel()),
+                    ],
+                  ),
+                  _ExpiredFooter(),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _ExpiredHeader extends StatelessWidget {
+  const _ExpiredHeader();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: const Color(0xFF12121A),
+      padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 18),
+      child: Row(
+        children: [
+          Container(
+            width: 38,
+            height: 38,
+            decoration: const BoxDecoration(
+              color: Color(0xFF3A1A1A),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.warning_amber_rounded,
+              color: Color(0xFFE05050),
+              size: 20,
+            ),
+          ),
+          const SizedBox(width: 14),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Your subscription has expired',
+                  style: GoogleFonts.nunito(
+                    color: const Color(0xFFF0EDE8),
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                Text(
+                  'Flexit Display - action required to resume',
+                  style: GoogleFonts.nunito(
+                    color: const Color(0xFF888780),
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _RechargeStepsPanel extends StatelessWidget {
+  const _RechargeStepsPanel();
+
+  static const _steps = [
+    _RechargeStep(
+      label: 'Open settings',
+      detail: 'In the Flexit mobile app, go to Settings',
+    ),
+    _RechargeStep(
+      label: 'Tap upgrade',
+      detail: 'Click Upgrade next to your current plan',
+    ),
+    _RechargeStep(
+      label: 'Select a plan',
+      detail: 'Choose the plan that works for your business',
+    ),
+    _RechargeStep(
+      label: 'Complete payment',
+      detail: 'Your display resumes automatically after payment',
+      isDone: true,
+    ),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(28),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'HOW TO RECHARGE',
+            style: GoogleFonts.nunito(
+              color: const Color(0xFF888780),
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              letterSpacing: 0.8,
+            ),
+          ),
+          const SizedBox(height: 20),
+          ...List.generate(_steps.length, (index) {
+            final step = _steps[index];
+            final isLast = index == _steps.length - 1;
+            return Column(
+              children: [
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    _StepBadge(
+                      number: index + 1,
+                      isDone: step.isDone,
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              step.label,
+                              style: GoogleFonts.nunito(
+                                color: const Color(0xFFF0EDE8),
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            const SizedBox(height: 2),
+                            Text(
+                              step.detail,
+                              style: GoogleFonts.nunito(
+                                color: const Color(0xFF888780),
+                                fontSize: 13,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+                if (!isLast)
+                  Padding(
+                    padding: const EdgeInsets.only(left: 14, top: 6, bottom: 6),
+                    child: Container(
+                      width: 0.5,
+                      height: 18,
+                      color: const Color(0xFF2E2E38),
+                    ),
+                  ),
+              ],
+            );
+          }),
+        ],
+      ),
+    );
+  }
+}
+
+class _RechargeStep {
+  final String label;
+  final String detail;
+  final bool isDone;
+
+  const _RechargeStep({
+    required this.label,
+    required this.detail,
+    this.isDone = false,
+  });
+}
+
+class _StepBadge extends StatelessWidget {
+  final int number;
+  final bool isDone;
+
+  const _StepBadge({required this.number, required this.isDone});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 28,
+      height: 28,
+      decoration: BoxDecoration(
+        color: isDone ? const Color(0xFF1A3A2A) : const Color(0xFF1A2A3A),
+        shape: BoxShape.circle,
+      ),
+      child: Center(
+        child: isDone
+            ? const Icon(Icons.check, size: 14, color: Color(0xFF4CAF82))
+            : Text(
+                '$number',
+                style: GoogleFonts.nunito(
+                  color: const Color(0xFF5B9BD5),
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+      ),
+    );
+  }
+}
+
+class _RechargeQrPanel extends StatelessWidget {
+  static const _upgradeDeepLink = 'texboard://settings-upgrade';
+
+  const _RechargeQrPanel();
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(28),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Text(
+            'QUICK RECHARGE',
+            style: GoogleFonts.nunito(
+              color: const Color(0xFF888780),
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              letterSpacing: 0.8,
+            ),
+          ),
+          const SizedBox(height: 20),
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(10),
+              border: Border.all(color: const Color(0xFF2E2E38), width: 0.5),
+            ),
+            child: QrImageView(
+              data: _upgradeDeepLink,
+              version: QrVersions.auto,
+              size: 140,
+              backgroundColor: Colors.white,
+              errorCorrectionLevel: QrErrorCorrectLevel.H,
+              eyeStyle: const QrEyeStyle(
+                eyeShape: QrEyeShape.square,
+                color: Color(0xFF0A0A0F),
+              ),
+              dataModuleStyle: const QrDataModuleStyle(
+                dataModuleShape: QrDataModuleShape.square,
+                color: Color(0xFF0A0A0F),
+              ),
+            ),
+          ),
+          const SizedBox(height: 14),
+          Text(
+            'Scan to recharge',
+            style: GoogleFonts.nunito(
+              color: const Color(0xFFF0EDE8),
+              fontSize: 13,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 3),
+          Text(
+            'Opens Flexit plan page',
+            style: GoogleFonts.nunito(
+              color: const Color(0xFF888780),
+              fontSize: 12,
+            ),
+          ),
+          const SizedBox(height: 14),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+            decoration: BoxDecoration(
+              color: const Color(0xFF12121A),
+              borderRadius: BorderRadius.circular(8),
+              border: Border.all(color: const Color(0xFF2E2E38), width: 0.5),
+            ),
+            child: Text(
+              _upgradeDeepLink,
+              style: GoogleFonts.dmMono(
+                color: const Color(0xFF888780),
+                fontSize: 11,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PanelDivider extends StatelessWidget {
+  const _PanelDivider();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(width: 0.5, color: const Color(0xFF2E2E38));
+  }
+}
+
+class _ExpiredFooter extends StatelessWidget {
+  const _ExpiredFooter();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: const Color(0xFF12121A),
+      padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 12),
+      child: Center(
+        child: Text.rich(
+          TextSpan(
+            text: 'Need help? Contact ',
+            style: GoogleFonts.nunito(
+              color: const Color(0xFF888780),
+              fontSize: 12,
+            ),
+            children: const [
+              TextSpan(
+                text: 'flexitontv@gmail.com',
+                style: TextStyle(color: Color(0xFF5B9BD5)),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class _WaitingScreen extends StatelessWidget {
   final String? businessName;
   const _WaitingScreen({this.businessName});
@@ -449,7 +873,7 @@ class _WaitingScreen extends StatelessWidget {
               style: TextStyle(
                 fontFamily: GoogleFonts.playfairDisplay().fontFamily,
                 fontSize: 28,
-                color: Color(0xFFF5F5F0),
+                color: const Color(0xFFF5F5F0),
               ),
             ),
             const SizedBox(height: 10),
@@ -457,7 +881,7 @@ class _WaitingScreen extends StatelessWidget {
               'Waiting for display configuration from your mobile app…',
               style: TextStyle(
                 fontFamily: GoogleFonts.nunito().fontFamily,
-                color: Color(0xFFB0AFA8),
+                color: const Color(0xFFB0AFA8),
                 fontSize: 16,
               ),
             ),

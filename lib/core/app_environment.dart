@@ -4,9 +4,9 @@ class AppEnvironment {
   AppEnvironment._();
 
   static const _defaults = {
-    'API_BASE_URL': 'https://api.flexit.online',
-    'CONTENT_BASE_URL': 'https://api.flexit.online/api/content',
-    'REALTIME_WS_URL': 'wss://api.flexit.online/realtime-ws',
+    'API_BASE_URL': 'http://api.flexit.online',
+    'CONTENT_BASE_URL': 'http://api.flexit.online/api/content',
+    'REALTIME_WS_URL': 'ws://api.flexit.online/realtime-ws',
   };
 
   static final Map<String, String> _values = Map.of(_defaults);
