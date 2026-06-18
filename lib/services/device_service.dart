@@ -21,6 +21,8 @@ class DeviceService extends ChangeNotifier with WidgetsBindingObserver {
   static String get _wsUrl => AppEnvironment.realtimeWsUrl;
   static const MethodChannel _deviceInfoChannel =
       MethodChannel('com.flexit.display/device_info');
+  static const MethodChannel _subscriptionChannel =
+      MethodChannel('com.flexit.display/subscription');
   static const String _menuConfigCachePrefix = 'cached_menu_config_';
   static const Duration _socketReadyTimeout = Duration(seconds: 3);
   static const Duration _reconnectDelay = Duration(seconds: 5);
@@ -36,12 +38,15 @@ class DeviceService extends ChangeNotifier with WidgetsBindingObserver {
   StreamSubscription? _socketSubscription;
   Timer? _reconnectTimer;
   Timer? _pingTimer;
+  Timer? _subscriptionTimer;
   int _socketGeneration = 0;
   String _realtimeStatus = 'connecting';
   Map<String, dynamic> _deviceInfo = const {};
   bool _isReportingDeviceInfo = false;
   bool _disposed = false;
   bool _isObservingLifecycle = false;
+  bool _isSubscriptionExpired = false;
+  bool _backendConfirmedDeleted = false;
 
   String get deviceCode => _deviceCode;
   DeviceConfig? get config => _config;
@@ -53,17 +58,23 @@ class DeviceService extends ChangeNotifier with WidgetsBindingObserver {
   String get backendEndpoint => _baseUrl;
   String get realtimeEndpoint => _wsUrl;
   Map<String, dynamic> get deviceInfo => _deviceInfo;
+  bool get isSubscriptionExpired => _isSubscriptionExpired;
 
   Future<void> initialize() async {
     _ensureLifecycleObserver();
 
     try {
       _deviceCode = await _loadOrCreateDeviceCode();
+      await _refreshSubscriptionState();
+      _startSubscriptionTimer();
       _deviceInfo = await _loadDeviceInfo();
       _config = await _loadCachedMenuConfig() ?? _unpairedConfig();
       if (_config?.isPaired == true) {
         _hasEverPaired = true;
+        unawaited(_storeSubscriptionEntitlement(_config!));
       }
+      await _verifyPairingWithBackend();
+      unawaited(_refreshConfigFromBackend());
       _isLoading = false;
       _error = null;
       notifyListeners();
@@ -74,6 +85,8 @@ class DeviceService extends ChangeNotifier with WidgetsBindingObserver {
       if (!_isDeviceCodeReady) {
         _deviceCode = _generateDeviceCode();
       }
+      await _refreshSubscriptionState();
+      _startSubscriptionTimer();
       _deviceInfo = await _loadDeviceInfo();
       _config = _unpairedConfig();
       _isLoading = false;
@@ -151,6 +164,38 @@ class DeviceService extends ChangeNotifier with WidgetsBindingObserver {
     }
   }
 
+  Future<bool?> _verifyPairingWithBackend() async {
+    if (!_isDeviceCodeReady) return null;
+
+    try {
+      final endpoint = Uri.parse(
+        '$_baseUrl/api/content/device/${Uri.encodeComponent(_deviceCode.trim().toUpperCase())}/pairing-status',
+      );
+      final response =
+          await http.get(endpoint).timeout(const Duration(seconds: 3));
+      if (response.statusCode < 200 || response.statusCode >= 300) return null;
+
+      final body = jsonDecode(response.body);
+      if (body is! Map<String, dynamic>) return null;
+      final data = body['data'];
+      if (data is! Map<String, dynamic>) return null;
+      final isPaired = data['isPaired'];
+      if (isPaired is! bool) return null;
+
+      _backendConfirmedDeleted = !isPaired;
+      if (!isPaired) {
+        _config = _unpairedConfig();
+        _hasEverPaired = false;
+        await _clearMenuConfigCache();
+        if (!_disposed) notifyListeners();
+      }
+      return isPaired;
+    } catch (_) {
+      // Offline startup keeps the last paired menu until the backend is reachable.
+      return null;
+    }
+  }
+
   void _connectRealtime() {
     if (_disposed) return;
     final generation = ++_socketGeneration;
@@ -183,6 +228,7 @@ class DeviceService extends ChangeNotifier with WidgetsBindingObserver {
       _startPing();
       unawaited(_reportDeviceInfoToBackend());
       _requestConfigOverRealtime();
+      unawaited(_verifyPairingWithBackend());
 
       _socketSubscription = socket.stream.listen(
         _handleRealtimeMessage,
@@ -214,6 +260,82 @@ class DeviceService extends ChangeNotifier with WidgetsBindingObserver {
         socket.sink.add(jsonEncode({'type': 'PING'}));
       }
     });
+  }
+
+  void _startSubscriptionTimer() {
+    _subscriptionTimer?.cancel();
+    _subscriptionTimer = Timer.periodic(const Duration(minutes: 1), (_) {
+      unawaited(_refreshSubscriptionState());
+      unawaited(_refreshConfigFromBackend());
+    });
+  }
+
+  Future<void> _refreshSubscriptionState() async {
+    try {
+      final status = await _subscriptionChannel
+          .invokeMapMethod<String, dynamic>('getStatus');
+      final expired = status?['expired'] == true;
+      if (_isSubscriptionExpired == expired) return;
+      _isSubscriptionExpired = expired;
+      if (!_disposed) notifyListeners();
+    } catch (_) {
+      // Unsupported platforms keep the last trusted in-memory state.
+    }
+  }
+
+  Future<void> _storeSubscriptionEntitlement(DeviceConfig config) async {
+    final expiresAt = config.subscriptionExpiresAt;
+    final serverTime = config.serverTime;
+    try {
+      final status =
+          await _subscriptionChannel.invokeMapMethod<String, dynamic>(
+        'updateEntitlement',
+        {
+          'deviceCode': config.deviceCode,
+          'expiresAtMillis': expiresAt?.millisecondsSinceEpoch,
+          'blocked': config.subscriptionBlocked,
+          'serverTimeMillis': serverTime?.millisecondsSinceEpoch ??
+              DateTime.now().millisecondsSinceEpoch,
+        },
+      );
+      final expired = status?['expired'] == true;
+      if (_isSubscriptionExpired != expired) {
+        _isSubscriptionExpired = expired;
+        if (!_disposed) notifyListeners();
+      }
+    } catch (_) {
+      final now = serverTime ?? DateTime.now();
+      final expired = config.subscriptionBlocked ||
+          (expiresAt != null && !expiresAt.isAfter(now));
+      if (_isSubscriptionExpired != expired) {
+        _isSubscriptionExpired = expired;
+        if (!_disposed) notifyListeners();
+      }
+    }
+  }
+
+  Future<void> _refreshConfigFromBackend() async {
+    if (!_isDeviceCodeReady || _disposed) return;
+
+    try {
+      final endpoint = Uri.parse(
+        '$_baseUrl/api/content/device/${Uri.encodeComponent(_deviceCode.trim().toUpperCase())}/config',
+      );
+      final response =
+          await http.get(endpoint).timeout(const Duration(seconds: 5));
+      if (response.statusCode < 200 || response.statusCode >= 300) return;
+
+      final body = jsonDecode(response.body);
+      if (body is! Map<String, dynamic>) return;
+      final data = body['data'];
+      if (data is! Map<String, dynamic>) return;
+
+      _handleRealtimeMessage(
+        jsonEncode({'type': 'DEVICE_CONFIG_UPDATED', 'data': data}),
+      );
+    } catch (_) {
+      // Realtime/cached config keeps the display running when polling is offline.
+    }
   }
 
   void _requestConfigOverRealtime() {
@@ -294,6 +416,7 @@ class DeviceService extends ChangeNotifier with WidgetsBindingObserver {
       }
 
       if (type == 'DEVICE_DELETED') {
+        _backendConfirmedDeleted = true;
         _config = _unpairedConfig();
         _hasEverPaired = false;
         _clearMenuConfigCache();
@@ -305,12 +428,17 @@ class DeviceService extends ChangeNotifier with WidgetsBindingObserver {
       }
 
       if (type == 'DEVICE_CONFIG_UPDATED' && data is Map<String, dynamic>) {
+        if (data['isPaired'] == true && _backendConfirmedDeleted) {
+          unawaited(_acceptPairedConfigAfterVerification(data));
+          return;
+        }
         if (data['isPaired'] == true) {
           _hasEverPaired = true;
         }
 
         try {
           _config = DeviceConfig.fromJson(data);
+          unawaited(_storeSubscriptionEntitlement(_config!));
           _saveMenuConfigCache(_config);
         } catch (_) {
           if (data['isPaired'] == true) {
@@ -319,11 +447,19 @@ class DeviceService extends ChangeNotifier with WidgetsBindingObserver {
               isPaired: true,
               businessName: data['businessName'] as String?,
               businessLogoUrl: data['businessLogoUrl'] as String?,
+              subscriptionExpiresAt: DateTime.tryParse(
+                data['subscriptionExpiresAt']?.toString() ?? '',
+              ),
+              subscriptionBlocked:
+                  data['subscriptionBlocked'] as bool? ?? false,
+              serverTime:
+                  DateTime.tryParse(data['serverTime']?.toString() ?? ''),
               orientation: _config?.orientation ?? DisplayOrientation.normal,
               menuTheme: _config?.menuTheme,
               themeColor: _config?.themeColor ?? 'gold',
               displayConfig: _config?.displayConfig,
             );
+            unawaited(_storeSubscriptionEntitlement(_config!));
             _saveMenuConfigCache(_config);
           } else {
             _config = _unpairedConfig();
@@ -342,6 +478,16 @@ class DeviceService extends ChangeNotifier with WidgetsBindingObserver {
     } catch (_) {
       // Ignore malformed realtime payloads so one bad message does not blank TV.
     }
+  }
+
+  Future<void> _acceptPairedConfigAfterVerification(
+    Map<String, dynamic> data,
+  ) async {
+    final isPaired = await _verifyPairingWithBackend();
+    if (isPaired != true || _disposed) return;
+    _handleRealtimeMessage(
+      jsonEncode({'type': 'DEVICE_CONFIG_UPDATED', 'data': data}),
+    );
   }
 
   Future<void> refresh() async {
@@ -372,6 +518,7 @@ class DeviceService extends ChangeNotifier with WidgetsBindingObserver {
     _socketGeneration++;
     _reconnectTimer?.cancel();
     _pingTimer?.cancel();
+    _subscriptionTimer?.cancel();
     _socketSubscription?.cancel();
     _disconnectRealtime(notify: false);
     super.dispose();

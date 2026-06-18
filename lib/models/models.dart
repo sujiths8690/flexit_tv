@@ -23,6 +23,9 @@ class DeviceConfig {
   final bool isPaired;
   final String? businessName;
   final String? businessLogoUrl;
+  final DateTime? subscriptionExpiresAt;
+  final bool subscriptionBlocked;
+  final DateTime? serverTime;
   final DisplayOrientation orientation;
   final DisplayConfig? displayConfig;
   final MenuThemeType? menuTheme;
@@ -33,6 +36,9 @@ class DeviceConfig {
     required this.isPaired,
     this.businessName,
     this.businessLogoUrl,
+    this.subscriptionExpiresAt,
+    this.subscriptionBlocked = false,
+    this.serverTime,
     this.orientation = DisplayOrientation.normal,
     this.displayConfig,
     this.menuTheme,
@@ -43,6 +49,9 @@ class DeviceConfig {
     bool? isPaired,
     String? businessName,
     String? businessLogoUrl,
+    DateTime? subscriptionExpiresAt,
+    bool? subscriptionBlocked,
+    DateTime? serverTime,
     DisplayOrientation? orientation,
     DisplayConfig? displayConfig,
     MenuThemeType? menuTheme,
@@ -53,6 +62,10 @@ class DeviceConfig {
       isPaired: isPaired ?? this.isPaired,
       businessName: businessName ?? this.businessName,
       businessLogoUrl: businessLogoUrl ?? this.businessLogoUrl,
+      subscriptionExpiresAt:
+          subscriptionExpiresAt ?? this.subscriptionExpiresAt,
+      subscriptionBlocked: subscriptionBlocked ?? this.subscriptionBlocked,
+      serverTime: serverTime ?? this.serverTime,
       orientation: orientation ?? this.orientation,
       displayConfig: displayConfig ?? this.displayConfig,
       menuTheme: menuTheme ?? this.menuTheme,
@@ -67,6 +80,10 @@ class DeviceConfig {
       isPaired: json['isPaired'] as bool,
       businessName: json['businessName'] as String?,
       businessLogoUrl: json['businessLogoUrl'] as String?,
+      subscriptionExpiresAt:
+          DateTime.tryParse(json['subscriptionExpiresAt']?.toString() ?? ''),
+      subscriptionBlocked: json['subscriptionBlocked'] as bool? ?? false,
+      serverTime: DateTime.tryParse(json['serverTime']?.toString() ?? ''),
       orientation: _parseOrientation(json['orientation'] as String?),
       displayConfig: json['displayConfig'] != null
           ? DisplayConfig.fromJson(
@@ -87,6 +104,9 @@ class DeviceConfig {
         'isPaired': isPaired,
         'businessName': businessName,
         'businessLogoUrl': businessLogoUrl,
+        'subscriptionExpiresAt': subscriptionExpiresAt?.toIso8601String(),
+        'subscriptionBlocked': subscriptionBlocked,
+        'serverTime': serverTime?.toIso8601String(),
         'orientation': orientation.name,
         'displayConfig': displayConfig?.toJson(),
         'menuTheme': menuTheme?.name,

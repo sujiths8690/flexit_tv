@@ -63,6 +63,19 @@ class MainActivity : FlutterActivity() {
                 else -> result.notImplemented()
             }
         }
+
+        MethodChannel(
+            flutterEngine.dartExecutor.binaryMessenger,
+            "com.flexit.display/subscription"
+        ).setMethodCallHandler { call, result ->
+            when (call.method) {
+                "getStatus" -> result.success(SubscriptionExpiryStore.status(this))
+                "updateEntitlement" -> result.success(
+                    SubscriptionExpiryStore.update(this, call.arguments as? Map<*, *>)
+                )
+                else -> result.notImplemented()
+            }
+        }
     }
 
     private fun deviceInfo(): Map<String, Any?> {
