@@ -19,13 +19,18 @@
     <application
         android:label="flexit"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher"
+        android:icon="@mipmap/flexit_launcher"
+        android:roundIcon="@mipmap/flexit_launcher_round"
+        android:logo="@mipmap/flexit_launcher"
         android:banner="@drawable/tv_banner"
         android:allowBackup="false"
         android:usesCleartextTraffic="true">
         <activity
             android:name=".MainActivity"
             android:exported="true"
+            android:icon="@mipmap/flexit_launcher"
+            android:logo="@mipmap/flexit_launcher"
+            android:banner="@drawable/tv_banner"
             android:launchMode="singleTop"
             android:taskAffinity=""
             android:theme="@style/LaunchTheme"
