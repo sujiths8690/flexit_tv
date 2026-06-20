@@ -27,6 +27,9 @@ class DeviceService extends ChangeNotifier with WidgetsBindingObserver {
   static const Duration _socketReadyTimeout = Duration(seconds: 3);
   static const Duration _reconnectDelay = Duration(seconds: 5);
   static const Duration _pingInterval = Duration(seconds: 20);
+  static const Duration _unpairedPollInterval = Duration(seconds: 7);
+  static const Duration _pairedRealtimePollInterval = Duration(minutes: 10);
+  static const Duration _pairedOfflinePollInterval = Duration(seconds: 45);
 
   late String _deviceCode;
   DeviceConfig? _config;
@@ -38,6 +41,7 @@ class DeviceService extends ChangeNotifier with WidgetsBindingObserver {
   StreamSubscription? _socketSubscription;
   Timer? _reconnectTimer;
   Timer? _pingTimer;
+  Timer? _configPollTimer;
   Timer? _subscriptionTimer;
   int _socketGeneration = 0;
   String _realtimeStatus = 'connecting';
@@ -59,6 +63,7 @@ class DeviceService extends ChangeNotifier with WidgetsBindingObserver {
   String get realtimeEndpoint => _wsUrl;
   Map<String, dynamic> get deviceInfo => _deviceInfo;
   bool get isSubscriptionExpired => _isSubscriptionExpired;
+  bool get _hasOpenRealtime => _socket != null;
 
   Future<void> initialize() async {
     _ensureLifecycleObserver();
@@ -68,6 +73,7 @@ class DeviceService extends ChangeNotifier with WidgetsBindingObserver {
       await _refreshSubscriptionState();
       _startSubscriptionTimer();
       _deviceInfo = await _loadDeviceInfo();
+      _startConfigPollTimer();
       _config = await _loadCachedMenuConfig() ?? _unpairedConfig();
       if (_config?.isPaired == true) {
         _hasEverPaired = true;
@@ -88,6 +94,7 @@ class DeviceService extends ChangeNotifier with WidgetsBindingObserver {
       await _refreshSubscriptionState();
       _startSubscriptionTimer();
       _deviceInfo = await _loadDeviceInfo();
+      _startConfigPollTimer();
       _config = _unpairedConfig();
       _isLoading = false;
       _error = null;
@@ -266,8 +273,39 @@ class DeviceService extends ChangeNotifier with WidgetsBindingObserver {
     _subscriptionTimer?.cancel();
     _subscriptionTimer = Timer.periodic(const Duration(minutes: 1), (_) {
       unawaited(_refreshSubscriptionState());
-      unawaited(_refreshConfigFromBackend());
     });
+  }
+
+  void _startConfigPollTimer() {
+    _configPollTimer?.cancel();
+    _configPollTimer = Timer(_nextConfigPollInterval(), _runConfigPoll);
+  }
+
+  Duration _nextConfigPollInterval() {
+    if (!isPaired) return _unpairedPollInterval;
+    if (_hasOpenRealtime) return _pairedRealtimePollInterval;
+    return _pairedOfflinePollInterval;
+  }
+
+  Future<void> _runConfigPoll() async {
+    if (_disposed) return;
+
+    if (!isPaired) {
+      final isPaired = await _verifyPairingWithBackend();
+      if (isPaired == true) {
+        await _refreshConfigFromBackend();
+      } else {
+        _requestConfigOverRealtime();
+      }
+    } else if (_hasOpenRealtime) {
+      await _verifyPairingWithBackend();
+      _requestConfigOverRealtime();
+    } else {
+      await _verifyPairingWithBackend();
+      await _refreshConfigFromBackend();
+    }
+
+    if (!_disposed) _startConfigPollTimer();
   }
 
   Future<void> _refreshSubscriptionState() async {
@@ -518,6 +556,7 @@ class DeviceService extends ChangeNotifier with WidgetsBindingObserver {
     _socketGeneration++;
     _reconnectTimer?.cancel();
     _pingTimer?.cancel();
+    _configPollTimer?.cancel();
     _subscriptionTimer?.cancel();
     _socketSubscription?.cancel();
     _disconnectRealtime(notify: false);
